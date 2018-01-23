@@ -72,7 +72,7 @@ import models._
         UserUpdateRequestValidator.isValid(result).fold(
           e => Future(BadRequest(ApiError("Failed to update user", e.message))),
           validUserUpdateRequest => {
-            EitherT(userService.update(request.user, validUserUpdateRequest)).fold(
+            EitherT(userService.update(request.user.idapiUser, validUserUpdateRequest)).fold(
               error => InternalServerError(error),
               user => {
                 if (Config.stage == "PROD") Tip.verify("User Update")
@@ -89,14 +89,14 @@ import models._
   def delete(id: String) = (auth andThen identityUserAction(id)).async { request =>
     logger.info(s"Deleting user $id")
 
-    val deleteEmailSubscriberF = EitherT(exactTargetService.deleteSubscriber(request.user.email))
+    val deleteEmailSubscriberF = EitherT(exactTargetService.deleteSubscriber(request.user.idapiUser.email))
     val deleteAccountF = EitherT(userService.delete(request.user))
 
     (for {
       _ <- deleteEmailSubscriberF
       _ <- deleteAccountF
     } yield {
-      EmailService.sendDeletionConfirmation(request.user.email)
+      EmailService.sendDeletionConfirmation(request.user.idapiUser.email)
     }).fold(
       error => {
         logger.error(s"Error deleting user $id: $error")
@@ -146,7 +146,7 @@ import models._
 
   def sendEmailValidation(id: String) = (auth andThen identityUserAction(id)).async { request =>
     logger.info(s"Sending email validation for user with id: $id")
-    EitherT(userService.sendEmailValidation(request.user)).fold(
+    EitherT(userService.sendEmailValidation(request.user.idapiUser)).fold(
       error => InternalServerError(error),
       _ => NoContent
     )
@@ -154,7 +154,7 @@ import models._
 
   def validateEmail(id: String) = (auth andThen identityUserAction(id)).async { request =>
     logger.info(s"Validating email for user with id: $id")
-    EitherT(userService.validateEmail(request.user)).fold(
+    EitherT(userService.validateEmail(request.user.idapiUser)).fold(
       error => InternalServerError(error),
       _ => NoContent
     )

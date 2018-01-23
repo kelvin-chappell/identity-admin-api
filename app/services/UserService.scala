@@ -244,9 +244,14 @@ import scalaz.{-\/, EitherT, \/-}
   }
 
   /* If it cannot find an active user, tries looking up a deleted one */
-  def findById(id: String): ApiResponse[Option[User]] = {
-    def deletedUserToActiveUser(userOpt: Option[DeletedUser]): Option[User] =
-      userOpt.map(user => User(id = user.id, email = user.email, username = Some(user.username), deleted = true))
+  def findById(id: String): ApiResponse[Option[GuardianUser]] = {
+    def deletedUserToActiveUser(userOpt: Option[DeletedUser]): Option[GuardianUser] =
+      userOpt.map(
+        user =>
+          GuardianUser(
+            idapiUser = User(id = user.id, email = user.email, username = Some(user.username)),
+            deleted = true)
+      )
 
     val deletedUserOptF = EitherT(deletedUsersRepository.findBy(id))
     val activeUserOptF = EitherT(usersReadRepository.find(id))
@@ -256,21 +261,21 @@ import scalaz.{-\/, EitherT, \/-}
       deletedUserOpt <- deletedUserOptF
     } yield {
       if (activeUserOpt.isDefined)
-        activeUserOpt
+        activeUserOpt.map(idapiUser => GuardianUser(idapiUser = idapiUser))
       else
         deletedUserToActiveUser(deletedUserOpt)
     }).run
   }
 
-  def delete(user: User): ApiResponse[ReservedUsernameList] = {
+  def delete(user: GuardianUser): ApiResponse[ReservedUsernameList] = {
     val reservedUsernameExperiment = Experiment.async(
       "loadReservedUsernames",
       reservedUserNameRepository.loadReservedUsernames,
       postgresReservedUsernameRepository.loadReservedUsernames
     )
     (for {
-      _ <- EitherT(usersWriteRepository.delete(user))
-      reservedUsernameList <- EitherT(user.username.fold(reservedUsernameExperiment.run)(reservedUserNameRepository.addReservedUsername(_)))
+      _ <- EitherT(usersWriteRepository.delete(user.idapiUser))
+      reservedUsernameList <- EitherT(user.idapiUser.username.fold(reservedUsernameExperiment.run)(reservedUserNameRepository.addReservedUsername(_)))
     } yield (reservedUsernameList)).run
   }
 
@@ -288,12 +293,12 @@ import scalaz.{-\/, EitherT, \/-}
   def unsubscribeFromMarketingEmails(email: String): ApiResponse[User] =
     usersWriteRepository.unsubscribeFromMarketingEmails(email)
 
-  def enrichUserWithProducts(user: User) = {
-    val subscriptionF = EitherT(salesforceService.getSubscriptionByIdentityId(user.id))
-    val membershipF = EitherT(salesforceService.getMembershipByIdentityId(user.id))
-    val hasCommentedF = EitherT(discussionService.hasCommented(user.id))
-    val exactTargetSubF = EitherT(exactTargetService.subscriberByIdentityId(user.id))
-    val contributionsF = EitherT(exactTargetService.contributionsByIdentityId(user.id))
+  def enrichUserWithProducts(user: GuardianUser): ApiResponse[GuardianUser]  = {
+    val subscriptionF = EitherT(salesforceService.getSubscriptionByIdentityId(user.idapiUser.id))
+    val membershipF = EitherT(salesforceService.getMembershipByIdentityId(user.idapiUser.id))
+    val hasCommentedF = EitherT(discussionService.hasCommented(user.idapiUser.id))
+    val exactTargetSubF = EitherT(exactTargetService.subscriberByIdentityId(user.idapiUser.id))
+    val contributionsF = EitherT(exactTargetService.contributionsByIdentityId(user.idapiUser.id))
 
     (for {
       subscription <- subscriptionF

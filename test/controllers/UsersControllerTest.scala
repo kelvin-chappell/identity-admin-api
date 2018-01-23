@@ -45,7 +45,7 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
     }
   }
 
-  def createIdentityUserActionRightMock(user: User) =
+  def createIdentityUserActionRightMock(user: GuardianUser) =
     new ActionRefiner[Request, UserRequest] {
       override def executionContext: ExecutionContext = ec
       override def refine[A](request: Request[A]): Future[Either[Result, UserRequest[A]]] =
@@ -144,10 +144,10 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
     }
 
     "return 200 when user found" in {
-      val user = User(testIdentityId, "test@test.com")
+      val user = GuardianUser(User(testIdentityId, "test@test.com"))
       when(identityUserAction.apply(any[String])).thenReturn(createIdentityUserActionRightMock(user))
       when(userService.findById(testIdentityId)).thenReturn(Future.successful(\/-(Some(user))))
-      when(userService.enrichUserWithProducts(any[User])).thenReturn(Future.successful(\/-(user)))
+      when(userService.enrichUserWithProducts(any[GuardianUser])).thenReturn(Future.successful(\/-(user)))
       val result = controller.findById(testIdentityId)(FakeRequest())
       status(result) shouldEqual OK
       contentAsJson(result) shouldEqual Json.toJson(user)
@@ -172,8 +172,9 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
     "return 400 when username and display name differ in request" in {
       val userUpdateRequest = UserUpdateRequest(email = "test@test.com", username = Some("username"), displayName = Some("displayname"))
       val user = User("id", "email")
-      when(identityUserAction.apply(any[String])).thenReturn(createIdentityUserActionRightMock(user))
-      when(userService.findById(testIdentityId)).thenReturn(Future.successful(\/-(Some(user))))
+      val guUser = GuardianUser(user)
+      when(identityUserAction.apply(any[String])).thenReturn(createIdentityUserActionRightMock(guUser))
+      when(userService.findById(testIdentityId)).thenReturn(Future.successful(\/-(Some(guUser))))
       when(userService.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(user)))
       val result = controller.update(testIdentityId)(FakeRequest().withBody(Json.toJson(userUpdateRequest)))
       status(result) shouldEqual BAD_REQUEST
@@ -182,8 +183,9 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
     "return 200 with updated user when update is successful" in {
       val userUpdateRequest = UserUpdateRequest(email = "test@test.com", username = Some("username"))
       val user = User("id", "email")
-      when(userService.findById(testIdentityId)).thenReturn(Future.successful(\/-(Some(user))))
-      when(userService.enrichUserWithProducts(any[User])).thenReturn(Future.successful(\/-(user)))
+      val guUser = GuardianUser(user)
+      when(userService.findById(testIdentityId)).thenReturn(Future.successful(\/-(Some(guUser))))
+      when(userService.enrichUserWithProducts(any[GuardianUser])).thenReturn(Future.successful(\/-(guUser)))
       when(userService.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(user)))
       val result = controller.update(testIdentityId)(FakeRequest().withBody(Json.toJson(userUpdateRequest)))
       status(result) shouldEqual OK
@@ -209,20 +211,20 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
     }
 
     "return 204 when email validation is sent" in {
-      val user = User("", "")
+      val user = GuardianUser(User("", ""))
       when(identityUserAction.apply(any[String])).thenReturn(createIdentityUserActionRightMock(user))
       when(userService.findById(testIdentityId)).thenReturn(Future.successful(\/-(Some(user))))
-      when(userService.enrichUserWithProducts(any[User])).thenReturn(Future.successful(\/-(user)))
-      when(userService.sendEmailValidation(user)).thenReturn(Future.successful(\/-{}))
+      when(userService.enrichUserWithProducts(any[GuardianUser])).thenReturn(Future.successful(\/-(user)))
+      when(userService.sendEmailValidation(user.idapiUser)).thenReturn(Future.successful(\/-{}))
       val result = controller.sendEmailValidation(testIdentityId)(FakeRequest())
       status(result) shouldEqual NO_CONTENT
     }
 
     "return 500 when error occurs" in {
-      val user = User("", "")
+      val user = GuardianUser(User("", ""))
       when(identityUserAction.apply(any[String])).thenReturn(createIdentityUserActionRightMock(user))
       when(userService.findById(testIdentityId)).thenReturn(Future.successful(\/-(Some(user))))
-      when(userService.sendEmailValidation(user)).thenReturn(Future.successful(-\/(ApiError("boom"))))
+      when(userService.sendEmailValidation(user.idapiUser)).thenReturn(Future.successful(-\/(ApiError("boom"))))
       val result = controller.sendEmailValidation(testIdentityId)(FakeRequest())
       status(result) shouldEqual INTERNAL_SERVER_ERROR
       contentAsJson(result) shouldEqual Json.toJson(ApiError("boom"))
@@ -238,19 +240,19 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
     }
 
     "return 204 when email is validated" in {
-      val user = User("", "")
+      val user = GuardianUser(User("", ""))
       when(identityUserAction.apply(any[String])).thenReturn(createIdentityUserActionRightMock(user))
       when(userService.findById(testIdentityId)).thenReturn(Future.successful(\/-(Some(user))))
-      when(userService.validateEmail(user)).thenReturn(Future.successful(\/-{}))
+      when(userService.validateEmail(user.idapiUser)).thenReturn(Future.successful(\/-{}))
       val result = controller.validateEmail(testIdentityId)(FakeRequest())
       status(result) shouldEqual NO_CONTENT
     }
 
     "return 500 when error occurs" in {
-      val user = User("", "")
+      val user = GuardianUser(User("", ""))
       when(identityUserAction.apply(any[String])).thenReturn(createIdentityUserActionRightMock(user))
       when(userService.findById(testIdentityId)).thenReturn(Future.successful(\/-(Some(user))))
-      when(userService.validateEmail(user)).thenReturn(Future.successful(-\/(ApiError("boom"))))
+      when(userService.validateEmail(user.idapiUser)).thenReturn(Future.successful(-\/(ApiError("boom"))))
       val result = controller.validateEmail(testIdentityId)(FakeRequest())
       status(result) shouldEqual INTERNAL_SERVER_ERROR
       contentAsJson(result) shouldEqual Json.toJson(ApiError("boom"))

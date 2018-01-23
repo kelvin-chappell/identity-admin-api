@@ -3,6 +3,7 @@ package models
 import org.joda.time.{DateTime, LocalDate}
 import play.api.libs.json.Json
 import repositories.IdentityUser
+
 import scala.language.implicitConversions
 import ClientJsonFormats._
 
@@ -137,29 +138,37 @@ object Contribution {
   implicit val format = Json.format[Contribution]
 }
 
-case class User(id: String,
-                email: String,
-                displayName: Option[String] = None,
-                username: Option[String] = None,
-                personalDetails: PersonalDetails = PersonalDetails(),
-                deliveryAddress: Address = Address(),
-                billingAddress: Address = Address(),
-                lastActivityDate: Option[DateTime] = None,
-                lastActivityIp: Option[String] = None,
-                registrationType: Option[String] = None,
-                registrationDate: Option[DateTime] = None,
-                registrationIp: Option[String] = None,
-                status: UserStatus = UserStatus(),
-                groups: Seq[UserGroup] = Nil,
-                socialLinks: Seq[SocialLink] = Nil,
-                membershipDetails: Option[SalesforceSubscription] = None,
-                subscriptionDetails: Option[SalesforceSubscription] = None,
-                exactTargetSubscriber: Option[ExactTargetSubscriber] = None,
-                hasCommented: Boolean = false,
-                deleted: Boolean = false,
-                orphan: Boolean = false,
-                contributions: List[Contribution] = Nil
-               )
+case class Consent(
+  actor: String,
+  id: String,
+  version: Int,
+  consented: Boolean,
+  timestamp: DateTime,
+  privacyPolicyVersion: Int
+)
+
+object Consent {
+  implicit val format = Json.format[Consent]
+}
+
+case class User(
+  id: String,
+  email: String,
+  displayName: Option[String] = None,
+  username: Option[String] = None,
+  personalDetails: PersonalDetails = PersonalDetails(),
+  deliveryAddress: Address = Address(),
+  billingAddress: Address = Address(),
+  lastActivityDate: Option[DateTime] = None,
+  lastActivityIp: Option[String] = None,
+  registrationType: Option[String] = None,
+  registrationDate: Option[DateTime] = None,
+  registrationIp: Option[String] = None,
+  status: UserStatus = UserStatus(),
+  consents: List[Consent] = Nil,
+  groups: Seq[UserGroup] = Nil,
+  socialLinks: Seq[SocialLink] = Nil
+)
 
 object User {
   implicit val format = Json.format[User]
@@ -220,3 +229,18 @@ case class MadgexUser(primaryEmailAddress: String,
                       receive3rdPartyMarketing: Boolean = false,
                       receiveGnmMarketing: Boolean = false
                      )
+
+case class GuardianUser(
+  idapiUser: User,
+  membershipDetails: Option[SalesforceSubscription] = None,
+  subscriptionDetails: Option[SalesforceSubscription] = None,
+  exactTargetSubscriber: Option[ExactTargetSubscriber] = None,
+  hasCommented: Boolean = false,
+  deleted: Boolean = false,
+  orphan: Boolean = false,
+  contributions: List[Contribution] = Nil
+)
+
+object GuardianUser {
+  implicit val format = Json.format[GuardianUser]
+}
