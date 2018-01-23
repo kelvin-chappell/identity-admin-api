@@ -4,13 +4,14 @@ import MongoJsonFormats._
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+
 import scala.language.implicitConversions
 
 case class SocialLink(socialId: String, 
                       network: String, 
                       profileData: Map[String, Any] = Map.empty)
 
-object SocialLink {
+object  SocialLink {
   val reads: Reads[SocialLink] = (
   (JsPath \ "socialId").read[String] and
   (JsPath \ "network").read[String] and
@@ -111,6 +112,19 @@ object SearchFields {
   implicit val format = Json.format[SearchFields]
 }
 
+case class Consent(
+  actor: String,
+  id: String,
+  version: Int,
+  consented: Boolean,
+  timestamp: DateTime,
+  privacyPolicyVersion: Int
+)
+
+object Consent {
+  implicit val format = Json.format[Consent]
+}
+
 sealed trait PersistedUser
 
 case class IdentityUser(primaryEmailAddress: String,
@@ -118,6 +132,7 @@ case class IdentityUser(primaryEmailAddress: String,
                         publicFields: Option[PublicFields] = None,
                         privateFields: Option[PrivateFields] = None,
                         statusFields: Option[StatusFields] = None,
+                        consents: List[Consent] = Nil,
                         dates: Option[UserDates] = Some(new UserDates()),
                         password: Option[String] = None,
                         userGroups: List[GroupMembership] = Nil,
@@ -133,6 +148,7 @@ object IdentityUser {
   (JsPath \ "publicFields").readNullable[PublicFields] and
   (JsPath \ "privateFields").readNullable[PrivateFields] and
   (JsPath \ "statusFields").readNullable[StatusFields] and
+  (JsPath \ "consents").read[List[Consent]] and
   (JsPath \ "dates").readNullable[UserDates] and
   (JsPath \ "password").readNullable[String] and
   (JsPath \ "userGroups").readNullable[List[GroupMembership]].map(_.getOrElse(Nil)) and
@@ -146,6 +162,7 @@ object IdentityUser {
   (JsPath \ "publicFields").writeNullable[PublicFields] and
   (JsPath \ "privateFields").writeNullable[PrivateFields] and
   (JsPath \ "statusFields").writeNullable[StatusFields] and
+  (JsPath \ "consents").write[List[Consent]] and
   (JsPath \ "dates").writeNullable[UserDates] and
   (JsPath \ "password").writeNullable[String] and
   (JsPath \ "userGroups").write[List[GroupMembership]] and

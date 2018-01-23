@@ -11,7 +11,7 @@ object Dependencies {
 
   val scalaUri =            "com.netaporter"                %% "scala-uri"                % "0.4.16"
   val identityCookie =      "com.gu.identity"               %% "identity-cookie"          % "3.121"
-  val identityModel =       "com.gu.identity"               %% "identity-model"           % "3.121"
+//  val identityModel =       "com.gu.identity"               %% "identity-model"           % "3.121"
   val identityPlayAuth =    "com.gu.identity"               %% "identity-play-auth"       % "1.2"
   val awsWrap =             "com.github.dwhjames"           %% "aws-wrap"                 % "0.8.0"
   val aws =                 "com.amazonaws"                 %  "aws-java-sdk"             % "1.11.105"
@@ -37,7 +37,7 @@ object Dependencies {
   )
   val cats = "org.typelevel" %% "cats-core" % "0.9.0"
 
-  val apiDependencies = Seq(scalaUri, identityCookie, identityModel, identityPlayAuth, emailValidation,
+  val apiDependencies = Seq(scalaUri, identityCookie, identityPlayAuth, emailValidation,
     playWS, playCache, playFilters, awsWrap, scalaz, reactiveMongo,
     specs2, scalaTest, embeddedMongo, mockWs, scalaTestPlus, akkaSlf4j, akkaTestkit,
     exactTargetFuel, tip, aws, guice, jodaForms, playJson, playJsonJoda, scalikeJdbc, hikariCp, diff, cats) ++ postgres

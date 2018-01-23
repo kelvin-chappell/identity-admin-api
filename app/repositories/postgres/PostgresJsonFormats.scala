@@ -38,6 +38,7 @@ trait PostgresJsonFormats {
       (JsPath \ "publicFields").readNullable[PublicFields] and
       (JsPath \ "privateFields").readNullable[PrivateFields] and
       (JsPath \ "statusFields").readNullable[StatusFields] and
+      (JsPath \ "consents").readNullable[List[Consent]].map(_.getOrElse(Nil)) and
       (JsPath \ "dates").readNullable[UserDates] and
       (JsPath \ "password").readNullable[String] and
       (JsPath \ "userGroups").readNullable[List[GroupMembership]].map(_.getOrElse(Nil)) and
@@ -51,6 +52,7 @@ trait PostgresJsonFormats {
       (JsPath \ "publicFields").writeNullable[PublicFields] and
       (JsPath \ "privateFields").writeNullable[PrivateFields] and
       (JsPath \ "statusFields").writeNullable[StatusFields] and
+      (JsPath \ "consents").write[List[Consent]] and
       (JsPath \ "dates").writeNullable[UserDates] and
       (JsPath \ "password").writeNullable[String] and
       (JsPath \ "userGroups").write[List[GroupMembership]] and

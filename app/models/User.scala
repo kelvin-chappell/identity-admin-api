@@ -3,7 +3,6 @@ package models
 import org.joda.time.{DateTime, LocalDate}
 import play.api.libs.json.Json
 import repositories.IdentityUser
-
 import scala.language.implicitConversions
 import ClientJsonFormats._
 
@@ -173,6 +172,7 @@ case class User(
 object User {
   implicit val format = Json.format[User]
 
+  // FIXME: Why?
   def fromIdentityUser(user: IdentityUser): User =
     User(
                 id = user._id,
@@ -214,6 +214,7 @@ object User {
                   receiveGnmMarketing = user.statusFields.flatMap(_.receiveGnmMarketing),
                   userEmailValidated = user.statusFields.flatMap(_.userEmailValidated)
                 ),
+                consents = user.consents.map(c => Consent(c.actor, c.id, c.version, c.consented, c.timestamp, c.privacyPolicyVersion)),
                 groups = user.userGroups.map(g => UserGroup(g.packageCode, g.path, g.joinedDate)),
                 socialLinks = user.socialLinks.map(s => SocialLink(s.socialId, s.network))
     )
