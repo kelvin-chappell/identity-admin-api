@@ -1,14 +1,15 @@
 package repositories
 
 import MongoJsonFormats._
+import models.UserUpdateRequest
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 import scala.language.implicitConversions
 
-case class SocialLink(socialId: String, 
-                      network: String, 
+case class SocialLink(socialId: String,
+                      network: String,
                       profileData: Map[String, Any] = Map.empty)
 
 object  SocialLink {
@@ -27,15 +28,15 @@ object  SocialLink {
   implicit val format: Format[SocialLink] = Format(reads, writes)
 }
 
-case class GroupMembership(path: String, 
-                           packageCode: String, 
+case class GroupMembership(path: String,
+                           packageCode: String,
                            joinedDate: Option[DateTime] = None)
 
 object GroupMembership {
   implicit val format = Json.format[GroupMembership]
 }
 
-case class LastActiveLocation(countryCode: Option[String] = None, 
+case class LastActiveLocation(countryCode: Option[String] = None,
                               cityCode : Option[String] = None)
 
 object LastActiveLocation {
@@ -127,49 +128,96 @@ object Consent {
 
 sealed trait PersistedUser
 
-case class IdentityUser(primaryEmailAddress: String,
-                        _id: String,
-                        publicFields: Option[PublicFields] = None,
-                        privateFields: Option[PrivateFields] = None,
-                        statusFields: Option[StatusFields] = None,
-                        consents: List[Consent] = Nil,
-                        dates: Option[UserDates] = Some(new UserDates()),
-                        password: Option[String] = None,
-                        userGroups: List[GroupMembership] = Nil,
-                        socialLinks: List[SocialLink] = Nil,
-                        adData: Map[String, Any] = Map.empty,
-                        searchFields: Option[SearchFields] = None
-                 ) extends PersistedUser
+/**
+  * One-to-one mapping with users BSON collection
+  */
+case class IdentityUser(
+    primaryEmailAddress: String,
+    _id: String,
+    publicFields: Option[PublicFields] = None,
+    privateFields: Option[PrivateFields] = None,
+    statusFields: Option[StatusFields] = None,
+    consents: List[Consent] = Nil,
+    dates: Option[UserDates] = Some(new UserDates()),
+    password: Option[String] = None,
+    userGroups: List[GroupMembership] = Nil,
+    socialLinks: List[SocialLink] = Nil,
+    adData: Map[String, Any] = Map.empty,
+    searchFields: Option[SearchFields] = None) extends PersistedUser {
+
+  /**
+    * @param userUpdateRequest deserialized incoming POST payload from Identity Admin
+    * @return IdentityUser with merged updates from Identity Admin client
+    */
+  def mergeWith(userUpdateRequest: UserUpdateRequest): IdentityUser = {
+
+    val publicFields = this.publicFields.getOrElse(PublicFields()).copy(
+      username = userUpdateRequest.username,
+      usernameLowerCase = userUpdateRequest.username.map(_.toLowerCase),
+      displayName = userUpdateRequest.displayName,
+      vanityUrl = userUpdateRequest.username,
+      location = userUpdateRequest.location,
+      aboutMe = userUpdateRequest.aboutMe,
+      interests = userUpdateRequest.interests
+    )
+
+    val privateFields = this.privateFields.getOrElse(PrivateFields()).copy(
+      firstName = userUpdateRequest.firstName,
+      secondName = userUpdateRequest.lastName
+    )
+
+    val statusFields = this.statusFields.getOrElse(StatusFields()).copy(
+      receive3rdPartyMarketing = userUpdateRequest.receive3rdPartyMarketing,
+      receiveGnmMarketing = userUpdateRequest.receiveGnmMarketing,
+      userEmailValidated = userUpdateRequest.userEmailValidated
+    )
+
+    val searchFields = this.searchFields.getOrElse(SearchFields()).copy(
+      emailAddress = Some(userUpdateRequest.email.toLowerCase),
+      username = userUpdateRequest.username.map(_.toLowerCase),
+      displayName = userUpdateRequest.displayName
+    )
+
+    this.copy(
+      primaryEmailAddress = userUpdateRequest.email.toLowerCase,
+      publicFields = Some(publicFields),
+      privateFields = Some(privateFields),
+      statusFields = Some(statusFields),
+      searchFields = Some(searchFields)
+    )
+  }
+}
 
 object IdentityUser {
   val identityUserReads: Reads[IdentityUser] = (
-  (JsPath \ "primaryEmailAddress").read[String] and
-  (JsPath \ "_id").read[String] and
-  (JsPath \ "publicFields").readNullable[PublicFields] and
-  (JsPath \ "privateFields").readNullable[PrivateFields] and
-  (JsPath \ "statusFields").readNullable[StatusFields] and
-  (JsPath \ "consents").read[List[Consent]] and
-  (JsPath \ "dates").readNullable[UserDates] and
-  (JsPath \ "password").readNullable[String] and
-  (JsPath \ "userGroups").readNullable[List[GroupMembership]].map(_.getOrElse(Nil)) and
-  (JsPath \ "socialLinks").readNullable[List[SocialLink]].map(_.getOrElse(Nil)) and
-  (JsPath \ "adData").readNullable[Map[String, Any]].map(_.getOrElse(Map.empty)) and
-  (JsPath \ "searchFields").readNullable[SearchFields])(IdentityUser.apply _)
+      (JsPath \ "primaryEmailAddress").read[String] and
+      (JsPath \ "_id").read[String] and
+      (JsPath \ "publicFields").readNullable[PublicFields] and
+      (JsPath \ "privateFields").readNullable[PrivateFields] and
+      (JsPath \ "statusFields").readNullable[StatusFields] and
+      (JsPath \ "consents").read[List[Consent]] and
+      (JsPath \ "dates").readNullable[UserDates] and
+      (JsPath \ "password").readNullable[String] and
+      (JsPath \ "userGroups").readNullable[List[GroupMembership]].map(_.getOrElse(Nil)) and
+      (JsPath \ "socialLinks").readNullable[List[SocialLink]].map(_.getOrElse(Nil)) and
+      (JsPath \ "adData").readNullable[Map[String, Any]].map(_.getOrElse(Map.empty)) and
+      (JsPath \ "searchFields").readNullable[SearchFields]
+    )(IdentityUser.apply _)
 
   val identityUserWrites: OWrites[IdentityUser] = (
-  (JsPath \ "primaryEmailAddress").write[String] and
-  (JsPath \ "_id").write[String] and
-  (JsPath \ "publicFields").writeNullable[PublicFields] and
-  (JsPath \ "privateFields").writeNullable[PrivateFields] and
-  (JsPath \ "statusFields").writeNullable[StatusFields] and
-  (JsPath \ "consents").write[List[Consent]] and
-  (JsPath \ "dates").writeNullable[UserDates] and
-  (JsPath \ "password").writeNullable[String] and
-  (JsPath \ "userGroups").write[List[GroupMembership]] and
-  (JsPath \ "socialLinks").write[List[SocialLink]] and
-  (JsPath \ "adData").write[Map[String, Any]] and
-  (JsPath \ "searchFields").writeNullable[SearchFields]
-)(unlift(IdentityUser.unapply))
+      (JsPath \ "primaryEmailAddress").write[String] and
+      (JsPath \ "_id").write[String] and
+      (JsPath \ "publicFields").writeNullable[PublicFields] and
+      (JsPath \ "privateFields").writeNullable[PrivateFields] and
+      (JsPath \ "statusFields").writeNullable[StatusFields] and
+      (JsPath \ "consents").write[List[Consent]] and
+      (JsPath \ "dates").writeNullable[UserDates] and
+      (JsPath \ "password").writeNullable[String] and
+      (JsPath \ "userGroups").write[List[GroupMembership]] and
+      (JsPath \ "socialLinks").write[List[SocialLink]] and
+      (JsPath \ "adData").write[Map[String, Any]] and
+      (JsPath \ "searchFields").writeNullable[SearchFields]
+    )(unlift(IdentityUser.unapply))
 
   implicit val format: OFormat[IdentityUser] = OFormat(identityUserReads, identityUserWrites)
 }
