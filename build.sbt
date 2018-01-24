@@ -40,7 +40,7 @@ resolvers ++= Seq(
   Resolver.bintrayRepo("hmrc", "releases"),
   Resolver.sonatypeRepo("releases"))
 
-libraryDependencies ++= Dependencies.apiDependencies
+libraryDependencies ++= Dependencies.value
 
 // *****************************
 // Deployment package
