@@ -1,10 +1,14 @@
 package models
 
+import ClientJsonFormats._
 import org.joda.time.{DateTime, LocalDate}
 import play.api.libs.json.Json
 import repositories.IdentityUser
 import scala.language.implicitConversions
-import ClientJsonFormats._
+
+/*
+    These case class models are intended for serialisation to JSON for consumption by Identity Admin
+ */
 
 case class PersonalDetails(firstName: Option[String] = None,
                            lastName: Option[String] = None,
@@ -172,65 +176,56 @@ case class User(
 object User {
   implicit val format = Json.format[User]
 
-  // FIXME: Why?
-  def fromIdentityUser(user: IdentityUser): User =
+  def apply(user: IdentityUser): User =
     User(
-                id = user._id,
-                email = user.primaryEmailAddress,
-                displayName = user.publicFields.flatMap(_.displayName),
-                username = user.publicFields.flatMap(_.username),
-                personalDetails = PersonalDetails(
-                 firstName = user.privateFields.flatMap(_.firstName),
-                 lastName = user.privateFields.flatMap(_.secondName),
-                 gender = user.privateFields.flatMap(_.gender),
-                 dateOfBirth = user.dates.flatMap(_.birthDate.map(_.toLocalDate)),
-                 location = user.publicFields.flatMap(_.location),
-                 aboutMe = user.publicFields.flatMap(_.aboutMe),
-                 interests = user.publicFields.flatMap(_.interests)
-                ),
-                deliveryAddress = Address(
-                  addressLine1 = user.privateFields.flatMap(_.address1),
-                  addressLine2 = user.privateFields.flatMap(_.address2),
-                  addressLine3 = user.privateFields.flatMap(_.address3),
-                  addressLine4 = user.privateFields.flatMap(_.address4),
-                  country = user.privateFields.flatMap(_.country),
-                  postcode = user.privateFields.flatMap(_.postcode)
-                ),
-                billingAddress = Address(
-                  addressLine1 = user.privateFields.flatMap(_.billingAddress1),
-                  addressLine2 = user.privateFields.flatMap(_.billingAddress2),
-                  addressLine3 = user.privateFields.flatMap(_.billingAddress3),
-                  addressLine4 = user.privateFields.flatMap(_.billingAddress4),
-                  country = user.privateFields.flatMap(_.billingCountry),
-                  postcode = user.privateFields.flatMap(_.billingPostcode)
-                ),
-                lastActivityDate = user.dates.flatMap(_.lastActivityDate),
-                lastActivityIp = user.privateFields.flatMap(_.lastActiveIpAddress),
-                registrationDate = user.dates.flatMap(_.accountCreatedDate),
-                registrationIp = user.privateFields.flatMap(_.registrationIp),
-                registrationType = user.privateFields.flatMap(_.registrationType),
-                status = UserStatus(
-                  receive3rdPartyMarketing = user.statusFields.flatMap(_.receive3rdPartyMarketing),
-                  receiveGnmMarketing = user.statusFields.flatMap(_.receiveGnmMarketing),
-                  userEmailValidated = user.statusFields.flatMap(_.userEmailValidated)
-                ),
-                consents = user.consents.map(c => Consent(c.actor, c.id, c.version, c.consented, c.timestamp, c.privacyPolicyVersion)),
-                groups = user.userGroups.map(g => UserGroup(g.packageCode, g.path, g.joinedDate)),
-                socialLinks = user.socialLinks.map(s => SocialLink(s.socialId, s.network))
+      id = user._id,
+      email = user.primaryEmailAddress,
+      displayName = user.publicFields.flatMap(_.displayName),
+      username = user.publicFields.flatMap(_.username),
+      personalDetails = PersonalDetails(
+       firstName = user.privateFields.flatMap(_.firstName),
+       lastName = user.privateFields.flatMap(_.secondName),
+       gender = user.privateFields.flatMap(_.gender),
+       dateOfBirth = user.dates.flatMap(_.birthDate.map(_.toLocalDate)),
+       location = user.publicFields.flatMap(_.location),
+       aboutMe = user.publicFields.flatMap(_.aboutMe),
+       interests = user.publicFields.flatMap(_.interests)
+      ),
+      deliveryAddress = Address(
+        addressLine1 = user.privateFields.flatMap(_.address1),
+        addressLine2 = user.privateFields.flatMap(_.address2),
+        addressLine3 = user.privateFields.flatMap(_.address3),
+        addressLine4 = user.privateFields.flatMap(_.address4),
+        country = user.privateFields.flatMap(_.country),
+        postcode = user.privateFields.flatMap(_.postcode)
+      ),
+      billingAddress = Address(
+        addressLine1 = user.privateFields.flatMap(_.billingAddress1),
+        addressLine2 = user.privateFields.flatMap(_.billingAddress2),
+        addressLine3 = user.privateFields.flatMap(_.billingAddress3),
+        addressLine4 = user.privateFields.flatMap(_.billingAddress4),
+        country = user.privateFields.flatMap(_.billingCountry),
+        postcode = user.privateFields.flatMap(_.billingPostcode)
+      ),
+      lastActivityDate = user.dates.flatMap(_.lastActivityDate),
+      lastActivityIp = user.privateFields.flatMap(_.lastActiveIpAddress),
+      registrationDate = user.dates.flatMap(_.accountCreatedDate),
+      registrationIp = user.privateFields.flatMap(_.registrationIp),
+      registrationType = user.privateFields.flatMap(_.registrationType),
+      status = UserStatus(
+        receive3rdPartyMarketing = user.statusFields.flatMap(_.receive3rdPartyMarketing),
+        receiveGnmMarketing = user.statusFields.flatMap(_.receiveGnmMarketing),
+        userEmailValidated = user.statusFields.flatMap(_.userEmailValidated)
+      ),
+      consents = user.consents.map(c => Consent(c.actor, c.id, c.version, c.consented, c.timestamp, c.privacyPolicyVersion)),
+      groups = user.userGroups.map(g => UserGroup(g.packageCode, g.path, g.joinedDate)),
+      socialLinks = user.socialLinks.map(s => SocialLink(s.socialId, s.network))
     )
 }
 
-case class GNMMadgexUser(id: String,
-                         madgexUser: MadgexUser
-                        )
-
-case class MadgexUser(primaryEmailAddress: String,
-                      firstName: Option[String] = None,
-                      secondName: Option[String] = None,
-                      receive3rdPartyMarketing: Boolean = false,
-                      receiveGnmMarketing: Boolean = false
-                     )
-
+/**
+  * Data view exposed to Identity Admin client
+  */
 case class GuardianUser(
   idapiUser: User,
   membershipDetails: Option[SalesforceSubscription] = None,
@@ -239,9 +234,18 @@ case class GuardianUser(
   hasCommented: Boolean = false,
   deleted: Boolean = false,
   orphan: Boolean = false,
-  contributions: List[Contribution] = Nil
-)
+  contributions: List[Contribution] = Nil)
 
 object GuardianUser {
   implicit val format = Json.format[GuardianUser]
 }
+
+case class GNMMadgexUser(id: String, madgexUser: MadgexUser)
+
+case class MadgexUser(
+  primaryEmailAddress: String,
+  firstName: Option[String] = None,
+  secondName: Option[String] = None,
+  receive3rdPartyMarketing: Boolean = false,
+  receiveGnmMarketing: Boolean = false)
+

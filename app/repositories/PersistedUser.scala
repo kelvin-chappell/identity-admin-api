@@ -5,8 +5,11 @@ import models.UserUpdateRequest
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-
 import scala.language.implicitConversions
+
+/*
+    These case class models are intended for serialisation to BSON for consumption by MongoDB
+ */
 
 case class SocialLink(socialId: String,
                       network: String,

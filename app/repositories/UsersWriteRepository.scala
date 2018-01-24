@@ -46,12 +46,12 @@ import scalaz.std.scalaFuture._
       updatedUser <- EitherT(doUpdate(persistedUser.copy(statusFields = Some(statusFields))))
     } yield (updatedUser)).run
 
-  private def doUpdate(userToSave: IdentityUser): ApiResponse[User] =
+  private def doUpdate(identityUser: IdentityUser): ApiResponse[User] =
     usersF
-      .flatMap(_.update(selector(userToSave._id), userToSave))
-      .map( _ => \/-(User.fromIdentityUser(userToSave)))
+      .flatMap(_.update(selector(identityUser._id), identityUser))
+      .map( _ => \/-(User(identityUser)))
       .recover { case error =>
-        val title = s"Failed to update user ${userToSave._id}"
+        val title = s"Failed to update user ${identityUser._id}"
         logger.error(title, error)
         -\/(ApiError(title, error.getMessage))
       }

@@ -60,7 +60,7 @@ import scalaz.std.scalaFuture._
     val identityUserOptF = usersCollectionF.flatMap(_.find(selector(key)).one[IdentityUser])
 
     OptionT(identityUserOptF).fold(
-      identityUser => \/-(Some(User.fromIdentityUser(identityUser))),
+      identityUser => \/-(Some(User(identityUser))),
       \/-(None)
     ).recover { case error =>
       val title = s"Failed to perform search in MongoDB"
