@@ -59,9 +59,7 @@ import models.Consent
         val usernameChanged = isUsernameChanged(userUpdateRequest.username, existingUser.username)
         val displayNameChanged = isDisplayNameChanged(userUpdateRequest.displayName, existingUser.displayName)
 
-        val update = IdentityUserUpdate(userUpdateRequest, userEmailValidated)
-
-        EitherT(usersWriteRepository.update(existingUser, update)).map { result =>
+        EitherT(usersWriteRepository.update(existingUser, userUpdateRequest)).map { result =>
           triggerEvents(
             userId = existingUser.id,
             usernameChanged = usernameChanged,

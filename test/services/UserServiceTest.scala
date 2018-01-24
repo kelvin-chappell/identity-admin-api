@@ -117,10 +117,10 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
     "update when email and username are valid" in {
       val user = User("id", "email@theguardian.com")
       val userUpdateRequest = UserUpdateRequest(email = "changedEmail@theguardian.com", username = Some("username"))
-      val updateRequest = IdentityUserUpdate(userUpdateRequest, Some(false))
-      val updatedUser = user.copy(email = updateRequest.email)
+      
+      val updatedUser = user.copy(email = userUpdateRequest.email)
 
-      when(userWriteRepo.update(user, updateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
+      when(userWriteRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
       when(identityApiClient.sendEmailValidation(user.id)).thenReturn(Future.successful(\/-{}))
 
       val result = service.update(user, userUpdateRequest)
@@ -133,10 +133,10 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
       val user = User("id", "email@theguardian.com", groups = jobsGroup)
       val userUpdateRequest = UserUpdateRequest(email = "changedEmail@theguardian.com")
       val gNMMadgexUser = GNMMadgexUser(user.id, userUpdateRequest)
-      val updateRequest = IdentityUserUpdate(userUpdateRequest, Some(false))
-      val updatedUser = user.copy(email = updateRequest.email)
+      
+      val updatedUser = user.copy(email = userUpdateRequest.email)
 
-      when(userWriteRepo.update(user, updateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
+      when(userWriteRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
       when(identityApiClient.sendEmailValidation(user.id)).thenReturn(Future.successful(\/-{}))
 
       val result = service.update(user, userUpdateRequest)
@@ -148,10 +148,10 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
     "not update madgex when non-jobs user changed" in {
       val user = User("id", "email@theguardian.com")
       val userUpdateRequest = UserUpdateRequest(email = "changedEmail@theguardian.com")
-      val updateRequest = IdentityUserUpdate(userUpdateRequest, Some(false))
-      val updatedUser = user.copy(email = updateRequest.email)
+      
+      val updatedUser = user.copy(email = userUpdateRequest.email)
 
-      when(userWriteRepo.update(user, updateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
+      when(userWriteRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
 
       Await.result(service.update(user, userUpdateRequest), 1.second) shouldEqual \/-(updatedUser)
       verifyZeroInteractions(madgexService)
@@ -160,10 +160,10 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
     "not send email validation when email has not changed" in {
       val user = User("id", "email@theguardian.com")
       val userUpdateRequest = UserUpdateRequest(email = "email@theguardian.com", username = Some("username"))
-      val updateRequest = IdentityUserUpdate(userUpdateRequest, None)
-      val updatedUser = user.copy(email = updateRequest.email)
+      
+      val updatedUser = user.copy(email = userUpdateRequest.email)
 
-      when(userWriteRepo.update(user, updateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
+      when(userWriteRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
 
       Await.result(service.update(user, userUpdateRequest), 1.second) shouldEqual \/-(updatedUser)
       verifyZeroInteractions(identityApiClient)
@@ -173,10 +173,10 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
       val user = User("id", "email@theguardian.com")
       val userUpdateRequest = UserUpdateRequest(email = "email@theguardian.com", username = Some("username"))
       val gNMMadgexUser = GNMMadgexUser(user.id, userUpdateRequest)
-      val updateRequest = IdentityUserUpdate(userUpdateRequest, None)
-      val updatedUser = user.copy(email = updateRequest.email)
+      
+      val updatedUser = user.copy(email = userUpdateRequest.email)
 
-      when(userWriteRepo.update(user, updateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
+      when(userWriteRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
 
       val result = service.update(user, userUpdateRequest)
 
@@ -212,9 +212,9 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
     "return internal server api error if an error occurs updating the user" in {
       val user = User("id", "email@theguardian.com")
       val userUpdateRequest = UserUpdateRequest(email = "email@theguardian.com", username = Some("username"))
-      val updateRequest = IdentityUserUpdate(userUpdateRequest, None)
+      
 
-      when(userWriteRepo.update(user, updateRequest)).thenReturn(Future.successful(-\/(ApiError("boom"))))
+      when(userWriteRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(-\/(ApiError("boom"))))
 
       Await.result(service.update(user, userUpdateRequest), 1.second) shouldEqual -\/(ApiError("boom"))
       verify(identityApiClient, never()).sendEmailValidation(user.id)

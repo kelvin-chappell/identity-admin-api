@@ -33,7 +33,7 @@ import scalaz.std.scalaFuture._
       )
     )
 
-  def update(user: User, userUpdateRequest: IdentityUserUpdate): ApiResponse[User] =
+  def update(user: User, userUpdateRequest: UserUpdateRequest): ApiResponse[User] =
     (for {
       persistedUser <- EitherT(findBy(user.id))
       updatedUser <- EitherT(doUpdate(prepareUserForUpdate(userUpdateRequest, persistedUser)))
@@ -46,7 +46,7 @@ import scalaz.std.scalaFuture._
       updatedUser <- EitherT(doUpdate(persistedUser.copy(statusFields = Some(statusFields))))
     } yield (updatedUser)).run
 
-  private def prepareUserForUpdate(userUpdateRequest: IdentityUserUpdate, identityUser: IdentityUser): IdentityUser = {
+  private def prepareUserForUpdate(userUpdateRequest: UserUpdateRequest, identityUser: IdentityUser): IdentityUser = {
     val publicFields = identityUser.publicFields.getOrElse(PublicFields()).copy(
       username = userUpdateRequest.username,
       usernameLowerCase = userUpdateRequest.username.map(_.toLowerCase),

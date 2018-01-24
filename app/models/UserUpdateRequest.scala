@@ -13,7 +13,8 @@ case class UserUpdateRequest(
   interests: Option[String] = None,
   receiveGnmMarketing: Option[Boolean] = None,
   receive3rdPartyMarketing: Option[Boolean] = None,
-  consents: List[Consent])
+  consents: List[Consent] = Nil,
+  userEmailValidated: Option[Boolean] = None)
 
 object UserUpdateRequest {
   implicit val format = Json.format[UserUpdateRequest]
