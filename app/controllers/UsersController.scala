@@ -70,7 +70,7 @@ import models._
     request.body.validate[UserUpdateRequest] match {
       case JsSuccess(result, path) =>
         UserUpdateRequestValidator.isValid(result).fold(
-          e => Future(BadRequest(ApiError("Failed to update user", e.message))),
+          error => Future(BadRequest(ApiError("Failed to update user", error.message))),
           validUserUpdateRequest => {
             EitherT(userService.update(request.user.idapiUser, validUserUpdateRequest)).fold(
               error => InternalServerError(error),

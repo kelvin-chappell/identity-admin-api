@@ -11,5 +11,6 @@ object ClientJsonFormats { // Format for identity-admin client of the API
   implicit val dateTimeFormat = Format[DateTime](dateReads, dateWrite)
 
   // LocalDate format
-  implicit val localDateFormat = Format[LocalDate](JodaReads.DefaultJodaLocalDateReads, JodaWrites.DefaultJodaLocalDateWrites)
+  implicit val localDateFormat =
+    Format[LocalDate](JodaReads.DefaultJodaLocalDateReads, JodaWrites.DefaultJodaLocalDateWrites)
 }

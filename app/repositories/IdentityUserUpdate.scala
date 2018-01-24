@@ -3,17 +3,17 @@ package repositories
 import models.UserUpdateRequest
 
 case class IdentityUserUpdate(
-                              email: String,
-                              username: Option[String] = None,
-                              displayName: Option[String] = None,
-                              firstName: Option[String] = None,
-                              lastName: Option[String] = None,
-                              location: Option[String] = None,
-                              aboutMe: Option[String] = None,
-                              interests: Option[String] = None,
-                              receiveGnmMarketing: Option[Boolean] = None,
-                              receive3rdPartyMarketing: Option[Boolean] = None,
-                              userEmailValidated: Option[Boolean] = None)
+  email: String,
+  username: Option[String] = None,
+  displayName: Option[String] = None,
+  firstName: Option[String] = None,
+  lastName: Option[String] = None,
+  location: Option[String] = None,
+  aboutMe: Option[String] = None,
+  interests: Option[String] = None,
+  receiveGnmMarketing: Option[Boolean] = None,
+  receive3rdPartyMarketing: Option[Boolean] = None,
+  userEmailValidated: Option[Boolean] = None)
 
 object IdentityUserUpdate {
   def apply(userUpdateRequest: UserUpdateRequest, userEmailValidated: Option[Boolean]): IdentityUserUpdate =

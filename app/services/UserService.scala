@@ -19,6 +19,7 @@ import util.scientist.{Defaults, Experiment, ExperimentSettings}
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.std.scalaFuture._
 import scalaz.{-\/, EitherT, \/-}
+import models.Consent
 
 @Singleton class UserService @Inject()(
     usersReadRepository: UsersReadRepository,
@@ -34,8 +35,8 @@ import scalaz.{-\/, EitherT, \/-}
     discussionService: DiscussionService,
     postgresDeletedUserRepository: PostgresDeletedUserRepository,
     postgresUsersReadRepository: PostgresUsersReadRepository,
-    postgresReservedUsernameRepository: PostgresReservedUsernameRepository
-)(implicit ec: ExecutionContext) extends Logging {
+    postgresReservedUsernameRepository: PostgresReservedUsernameRepository)
+    (implicit ec: ExecutionContext) extends Logging {
 
   implicit val dateTimeDiffShow: DiffShow[DateTime] = new DiffShow[DateTime] {
     def show ( d: DateTime ) = "DateTime(" + d.toString + ")"
@@ -46,38 +47,39 @@ import scalaz.{-\/, EitherT, \/-}
   private implicit val futureMonad =
     cats.instances.future.catsStdInstancesForFuture(ec)
 
-  def update(user: User, userUpdateRequest: UserUpdateRequest): ApiResponse[User] = {
-    val emailValid = isEmailValid(user, userUpdateRequest)
-    val usernameValid = isUsernameValid(user, userUpdateRequest)
+  def update(existingUser: User, userUpdateRequest: UserUpdateRequest): ApiResponse[User] = {
+    val emailValid = isEmailValid(existingUser, userUpdateRequest)
+    val usernameValid = isUsernameValid(existingUser, userUpdateRequest)
 
     (emailValid, usernameValid) match {
       case (true, true) =>
-        val userEmailChanged = !user.email.equalsIgnoreCase(userUpdateRequest.email)
-        val userEmailValidated = if(userEmailChanged) Some(false) else user.status.userEmailValidated
-        val userEmailValidatedChanged = isEmailValidationChanged(userEmailValidated, user.status.userEmailValidated)
-        val usernameChanged = isUsernameChanged(userUpdateRequest.username, user.username)
-        val displayNameChanged = isDisplayNameChanged(userUpdateRequest.displayName, user.displayName)
+        val userEmailChanged = !existingUser.email.equalsIgnoreCase(userUpdateRequest.email)
+        val userEmailValidated = if(userEmailChanged) Some(false) else existingUser.status.userEmailValidated
+        val userEmailValidatedChanged = isEmailValidationChanged(userEmailValidated, existingUser.status.userEmailValidated)
+        val usernameChanged = isUsernameChanged(userUpdateRequest.username, existingUser.username)
+        val displayNameChanged = isDisplayNameChanged(userUpdateRequest.displayName, existingUser.displayName)
+
         val update = IdentityUserUpdate(userUpdateRequest, userEmailValidated)
 
-        EitherT(usersWriteRepository.update(user, update)).map { result =>
+        EitherT(usersWriteRepository.update(existingUser, update)).map { result =>
           triggerEvents(
-            userId = user.id,
+            userId = existingUser.id,
             usernameChanged = usernameChanged,
             displayNameChanged = displayNameChanged,
             emailValidatedChanged = userEmailValidatedChanged
           )
 
           if(userEmailChanged) {
-            identityApiClient.sendEmailValidation(user.id)
-            exactTargetService.updateEmailAddress(user.email, userUpdateRequest.email)
+            identityApiClient.sendEmailValidation(existingUser.id)
+            exactTargetService.updateEmailAddress(existingUser.email, userUpdateRequest.email)
           }
 
           if (userEmailChanged && eventsEnabled) {
-            salesforceIntegration.enqueueUserUpdate(user.id, userUpdateRequest.email)
+            salesforceIntegration.enqueueUserUpdate(existingUser.id, userUpdateRequest.email)
           }
 
-          if (isJobsUser(user) && isJobsUserChanged(user, userUpdateRequest)) {
-            madgexService.update(GNMMadgexUser(user.id, userUpdateRequest))
+          if (isJobsUser(existingUser) && isJobsUserChanged(existingUser, userUpdateRequest)) {
+            madgexService.update(GNMMadgexUser(existingUser.id, userUpdateRequest))
           }
 
           result
