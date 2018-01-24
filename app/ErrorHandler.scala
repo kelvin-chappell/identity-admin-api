@@ -1,10 +1,12 @@
+import models.client.ClientJsonFormats._
 import play.api.http.HttpErrorHandler
 import play.api.mvc._
 import play.api.mvc.Results._
+
 import scala.concurrent._
 import javax.inject.Singleton
 import com.gu.identity.util.Logging
-import models.ApiError
+import models.client.ApiError
 
 @Singleton
 class ErrorHandler extends HttpErrorHandler with Logging {

@@ -1,7 +1,8 @@
 package controllers
 
 import actions.AuthenticatedAction
-import models.{ApiError, ReservedUsernameList}
+import models.client.{ApiError, ReservedUsernameList}
+import models.database.mongo.ReservedUserNameWriteRepository
 import org.mockito.Mockito._
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{Matchers, WordSpec}
@@ -10,7 +11,6 @@ import play.api.libs.json.Json
 import play.api.mvc.{BodyParsers, ControllerComponents, Request, Result}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import repositories.ReservedUserNameWriteRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.{-\/, \/-}

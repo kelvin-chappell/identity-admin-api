@@ -1,10 +1,11 @@
-package repositories
+package models.database.mongo
 
-import MongoJsonFormats._
-import models.UserUpdateRequest
+import models.client.UserUpdateRequest
+import models.database.mongo.MongoJsonFormats._
 import org.joda.time.DateTime
-import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import play.api.libs.json._
+
 import scala.language.implicitConversions
 
 /*

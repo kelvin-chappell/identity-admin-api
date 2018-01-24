@@ -3,6 +3,8 @@ package controllers
 import actions._
 import mockws.MockWS
 import models._
+import models.client._
+import models.database.mongo.IdentityUser
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{Matchers, WordSpec}
 import org.mockito.Matchers.any
@@ -12,7 +14,6 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.mvc.Results._
 import play.api.test.FakeRequest
-import repositories.IdentityUser
 import play.api.test.Helpers._
 import services.{DiscussionService, ExactTargetService, SalesforceService, UserService}
 

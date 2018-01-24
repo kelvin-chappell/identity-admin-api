@@ -1,6 +1,7 @@
 package repositories.postgres
 
 import com.google.common.util.concurrent.MoreExecutors
+import models.database.postgres.PostgresDeletedUserRepository
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{Matchers, WordSpecLike}
 import scalikejdbc._

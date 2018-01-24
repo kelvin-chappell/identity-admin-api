@@ -1,9 +1,10 @@
-package models
+package models.client
 
 import ClientJsonFormats._
+import models.database.mongo.IdentityUser
 import org.joda.time.{DateTime, LocalDate}
 import play.api.libs.json.Json
-import repositories.IdentityUser
+
 import scala.language.implicitConversions
 
 /*

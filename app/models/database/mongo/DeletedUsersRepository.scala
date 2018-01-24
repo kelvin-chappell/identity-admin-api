@@ -1,20 +1,18 @@
-package repositories
+package models.database.mongo
 
 import javax.inject.{Inject, Singleton}
 
 import com.gu.identity.util.Logging
-import models.{ApiError, ApiResponse, SearchResponse}
+import models.client.{ApiError, ApiResponse, SearchResponse}
 import play.api.libs.json.Json
 import play.modules.reactivemongo.ReactiveMongoApi
-import reactivemongo.play.json.collection._
-import reactivemongo.play.json._
 import reactivemongo.api.ReadPreference
-
-import scala.concurrent.{ExecutionContext, Future}
-import scalaz.{-\/, EitherT, OptionT, \/-}
-import scalaz.std.scalaFuture._
-import DeletedUser._
 import reactivemongo.bson.BSONDocument
+import reactivemongo.play.json._
+import reactivemongo.play.json.collection._
+import scalaz.std.scalaFuture._
+import scala.concurrent.ExecutionContext
+import scalaz.{-\/, EitherT, \/-}
 
 @Singleton class DeletedUsersRepository @Inject()(
     reactiveMongoApi: ReactiveMongoApi)(implicit ec: ExecutionContext) extends Logging {

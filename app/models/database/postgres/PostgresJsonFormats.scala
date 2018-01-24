@@ -1,10 +1,11 @@
-package repositories.postgres
+package models.database.postgres
 
+import models.database._
+import models.database.mongo._
 import org.joda.time.DateTime
-import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
+import org.joda.time.format.{DateTimeFormatter, ISODateTimeFormat}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import repositories._
 
 import scala.util.Try
 

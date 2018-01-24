@@ -8,10 +8,11 @@ import ai.x.diff._
 import ai.x.diff.conversions._
 import com.gu.identity.util.Logging
 import configuration.Config.PublishEvents.eventsEnabled
-import models._
+import models.{client, _}
+import models.client._
+import models.database.mongo._
+import models.database.postgres.{PostgresDeletedUserRepository, PostgresReservedUsernameRepository, PostgresUsersReadRepository}
 import org.joda.time.DateTime
-import repositories._
-import repositories.postgres._
 import uk.gov.hmrc.emailaddress.EmailAddress
 import util.UserConverter._
 import util.scientist.{Defaults, Experiment, ExperimentSettings}
@@ -19,7 +20,6 @@ import util.scientist.{Defaults, Experiment, ExperimentSettings}
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.std.scalaFuture._
 import scalaz.{-\/, EitherT, \/-}
-import models.Consent
 
 @Singleton class UserService @Inject()(
     usersReadRepository: UsersReadRepository,
@@ -77,7 +77,7 @@ import models.Consent
           }
 
           if (isJobsUser(existingUser) && isJobsUserChanged(existingUser, userUpdateRequest)) {
-            madgexService.update(GNMMadgexUser(existingUser.id, userUpdateRequest))
+            madgexService.update(client.GNMMadgexUser(existingUser.id, userUpdateRequest))
           }
 
           result

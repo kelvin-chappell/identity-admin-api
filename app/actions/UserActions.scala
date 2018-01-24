@@ -1,10 +1,11 @@
 package actions
 
+import models.client.ClientJsonFormats._
 import javax.inject.{Inject, Singleton}
 
 import com.gu.tip.Tip
 import configuration.Config
-import models.{GuardianUser, User}
+import models.client.{GuardianUser, User}
 import play.api.mvc.{ActionRefiner, Request, Result, WrappedRequest}
 import play.api.mvc.Results._
 import services.{ExactTargetService, SalesforceService, UserService}

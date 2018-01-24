@@ -1,17 +1,17 @@
 package services
 
 import actors.EventPublishingActorProvider
-import models._
+import models.client._
+import models.database.mongo.{DeletedUsersRepository, ReservedUserNameWriteRepository, UsersReadRepository, UsersWriteRepository}
+import models.database.postgres.{PostgresDeletedUserRepository, PostgresReservedUsernameRepository, PostgresUsersReadRepository}
 import util.UserConverter._
 import org.mockito.Mockito
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpec}
 import org.scalatest.mockito.MockitoSugar
-import repositories._
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import org.mockito.Mockito._
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
-import repositories.postgres.{PostgresDeletedUserRepository, PostgresReservedUsernameRepository, PostgresUsersReadRepository}
 
 import scala.concurrent.duration._
 import scalaz.{-\/, \/-}

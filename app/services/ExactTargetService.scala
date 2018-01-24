@@ -6,12 +6,12 @@ import com.exacttarget.fuelsdk._
 import com.gu.identity.util.Logging
 import configuration.Config
 import models._
+import models.client._
+import models.database.mongo.UsersReadRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.std.scalaFuture._
 import scalaz.{-\/, EitherT, \/, \/-}
-import repositories.UsersReadRepository
-
 import scala.collection.JavaConversions._
 import scala.util.{Failure, Success, Try}
 

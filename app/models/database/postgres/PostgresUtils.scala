@@ -1,7 +1,7 @@
-package repositories.postgres
+package models.database.postgres
 
 import com.gu.identity.util.Logging
-import models.{ApiError, ApiResponse}
+import models.client.{ApiError, ApiResponse}
 import scalikejdbc.{DB, DBSession}
 
 import scala.concurrent.{ExecutionContext, Future}

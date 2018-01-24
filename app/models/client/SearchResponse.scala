@@ -1,8 +1,8 @@
-package models
+package models.client
 
+import models.database.mongo.PersistedUser
 import play.api.libs.json.Json
 import play.api.mvc.{Result, Results}
-import repositories.PersistedUser
 
 import scala.language.implicitConversions
 

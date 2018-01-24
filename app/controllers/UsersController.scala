@@ -1,12 +1,12 @@
 package controllers
 
+import models.client.ClientJsonFormats._
 import javax.inject.{Inject, Singleton}
 
 import actions.{AuthenticatedAction, IdentityUserAction, OrphanUserAction}
 import com.gu.identity.util.Logging
 import com.gu.tip.Tip
 import configuration.Config
-import models._
 import play.api.libs.json._
 import play.api.mvc._
 import services._
@@ -18,8 +18,8 @@ import scalaz.std.string._
 import scalaz.syntax.validation._
 import scalaz.syntax.apply._
 import scalaz.syntax.std.boolean._
-import models.ApiError._
-import models._
+import models.client.{ApiError, UserUpdateRequest, UserUpdateRequestValidator}
+import models.client.ApiError._
 
 @Singleton class UsersController @Inject() (
     cc: ControllerComponents,

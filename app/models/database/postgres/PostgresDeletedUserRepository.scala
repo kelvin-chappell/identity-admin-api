@@ -1,10 +1,10 @@
-package repositories.postgres
+package models.database.postgres
 
 import com.google.inject.{Inject, Singleton}
 import com.gu.identity.util.Logging
-import models.{ApiResponse, SearchResponse}
+import models.client.{ApiResponse, SearchResponse}
+import models.database.mongo.{DeletedUser, IdentityUser}
 import play.api.libs.json.Json
-import repositories.{DeletedUser, IdentityUser}
 import scalikejdbc._
 
 import scala.concurrent.ExecutionContext

@@ -1,13 +1,14 @@
 package controllers
 
+import models.client.ClientJsonFormats._
 import javax.inject.{Inject, Singleton}
 
 import actions.AuthenticatedAction
 import com.gu.identity.util.Logging
-import models._
+import models.client.ApiError
+import models.database.mongo.ReservedUserNameWriteRepository
 import play.api.libs.json.{JsError, JsSuccess, Json}
-import play.api.mvc.{AbstractController, Controller, ControllerComponents}
-import repositories.ReservedUserNameWriteRepository
+import play.api.mvc.{AbstractController, ControllerComponents}
 
 import scalaz.EitherT
 import scalaz.std.scalaFuture._

@@ -1,17 +1,17 @@
-package repositories
+package models.database.mongo
 
 import javax.inject.{Inject, Singleton}
 
 import com.gu.identity.util.Logging
-import models._
-import play.modules.reactivemongo.ReactiveMongoApi
-import reactivemongo.play.json.collection._
-import reactivemongo.play.json._
+import models.client.{ApiError, ApiResponse, User, UserUpdateRequest}
 import play.api.libs.json.Json
+import play.modules.reactivemongo.ReactiveMongoApi
+import reactivemongo.play.json._
+import reactivemongo.play.json.collection._
 
 import scala.concurrent.ExecutionContext
-import scalaz.{-\/, EitherT, OptionT, \/-}
 import scalaz.std.scalaFuture._
+import scalaz.{-\/, EitherT, OptionT, \/-}
 
 @Singleton class UsersWriteRepository @Inject() (
     reactiveMongoApi: ReactiveMongoApi,
