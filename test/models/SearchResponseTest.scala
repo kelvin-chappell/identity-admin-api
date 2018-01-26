@@ -1,10 +1,12 @@
 package models
 
 import java.util.UUID
+
+import models.client.SearchResponse
+import models.database.mongo.IdentityUser
 import org.scalatest.{Matchers, WordSpec}
 import org.scalatest.mockito.MockitoSugar
 import org.mockito.Mockito._
-import repositories.IdentityUser
 
 class SearchResponseTest extends WordSpec with MockitoSugar with Matchers {
 

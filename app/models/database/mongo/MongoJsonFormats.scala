@@ -1,4 +1,4 @@
-package repositories
+package models.database.mongo
 
 import org.joda.time.{DateTime, DateTimeZone}
 import play.api.libs.json.Json.JsValueWrapper

@@ -1,19 +1,19 @@
-package repositories
+package models.database.mongo
 
-import configuration.Config.SearchValidation._
-import models.{ApiError, ApiResponse, SearchResponse, User}
 import javax.inject.{Inject, Singleton}
 
 import com.gu.identity.util.Logging
+import configuration.Config.SearchValidation._
+import models.client.{ApiError, ApiResponse, SearchResponse, User}
 import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoApi
-import reactivemongo.play.json.collection._
-import reactivemongo.play.json._
 import reactivemongo.api.{Cursor, QueryOpts, ReadPreference}
+import reactivemongo.play.json._
+import reactivemongo.play.json.collection._
 
 import scala.concurrent.{ExecutionContext, Future}
-import scalaz.{-\/, OptionT, \/-}
 import scalaz.std.scalaFuture._
+import scalaz.{-\/, OptionT, \/-}
 
 @Singleton class UsersReadRepository @Inject() (
     reactiveMongoApi: ReactiveMongoApi)(implicit ec: ExecutionContext) extends Logging {
@@ -60,7 +60,7 @@ import scalaz.std.scalaFuture._
     val identityUserOptF = usersCollectionF.flatMap(_.find(selector(key)).one[IdentityUser])
 
     OptionT(identityUserOptF).fold(
-      identityUser => \/-(Some(User.fromIdentityUser(identityUser))),
+      identityUser => \/-(Some(User(identityUser))),
       \/-(None)
     ).recover { case error =>
       val title = s"Failed to perform search in MongoDB"

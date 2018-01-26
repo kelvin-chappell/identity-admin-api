@@ -1,17 +1,17 @@
-package repositories
+package models.database.mongo
 
 import javax.inject.{Inject, Singleton}
 
 import com.gu.identity.util.Logging
-import models._
-import play.modules.reactivemongo.ReactiveMongoApi
-import reactivemongo.play.json.collection._
-import reactivemongo.play.json._
+import models.client.{ApiError, ApiResponse, User, UserUpdateRequest}
 import play.api.libs.json.Json
+import play.modules.reactivemongo.ReactiveMongoApi
+import reactivemongo.play.json._
+import reactivemongo.play.json.collection._
 
 import scala.concurrent.ExecutionContext
-import scalaz.{-\/, EitherT, OptionT, \/-}
 import scalaz.std.scalaFuture._
+import scalaz.{-\/, EitherT, OptionT, \/-}
 
 @Singleton class UsersWriteRepository @Inject() (
     reactiveMongoApi: ReactiveMongoApi,
@@ -33,10 +33,10 @@ import scalaz.std.scalaFuture._
       )
     )
 
-  def update(user: User, userUpdateRequest: IdentityUserUpdate): ApiResponse[User] =
+  def update(user: User, userUpdateRequest: UserUpdateRequest): ApiResponse[User] =
     (for {
       persistedUser <- EitherT(findBy(user.id))
-      updatedUser <- EitherT(doUpdate(prepareUserForUpdate(userUpdateRequest, persistedUser)))
+      updatedUser <- EitherT(doUpdate(persistedUser.mergeWith(userUpdateRequest)))
     } yield (updatedUser)).run
 
   def updateEmailValidationStatus(user: User, emailValidated: Boolean): ApiResponse[User] =
@@ -46,45 +46,12 @@ import scalaz.std.scalaFuture._
       updatedUser <- EitherT(doUpdate(persistedUser.copy(statusFields = Some(statusFields))))
     } yield (updatedUser)).run
 
-  private def prepareUserForUpdate(userUpdateRequest: IdentityUserUpdate, identityUser: IdentityUser): IdentityUser = {
-    val publicFields = identityUser.publicFields.getOrElse(PublicFields()).copy(
-      username = userUpdateRequest.username,
-      usernameLowerCase = userUpdateRequest.username.map(_.toLowerCase),
-      displayName = userUpdateRequest.displayName,
-      vanityUrl = userUpdateRequest.username,
-      location = userUpdateRequest.location,
-      aboutMe = userUpdateRequest.aboutMe,
-      interests = userUpdateRequest.interests
-    )
-    val privateFields = identityUser.privateFields.getOrElse(PrivateFields()).copy(
-      firstName = userUpdateRequest.firstName,
-      secondName = userUpdateRequest.lastName
-    )
-    val statusFields = identityUser.statusFields.getOrElse(StatusFields()).copy(
-      receive3rdPartyMarketing = userUpdateRequest.receive3rdPartyMarketing,
-      receiveGnmMarketing = userUpdateRequest.receiveGnmMarketing,
-      userEmailValidated = userUpdateRequest.userEmailValidated
-    )
-    val searchFields = identityUser.searchFields.getOrElse(SearchFields()).copy(
-      emailAddress = Some(userUpdateRequest.email.toLowerCase),
-      username = userUpdateRequest.username.map(_.toLowerCase),
-      displayName = userUpdateRequest.displayName
-    )
-    identityUser.copy(
-      primaryEmailAddress = userUpdateRequest.email.toLowerCase,
-      publicFields = Some(publicFields),
-      privateFields = Some(privateFields),
-      statusFields = Some(statusFields),
-      searchFields = Some(searchFields)
-    )
-  }
-
-  private def doUpdate(userToSave: IdentityUser): ApiResponse[User] =
+  private def doUpdate(identityUser: IdentityUser): ApiResponse[User] =
     usersF
-      .flatMap(_.update(selector(userToSave._id), userToSave))
-      .map( _ => \/-(User.fromIdentityUser(userToSave)))
+      .flatMap(_.update(selector(identityUser._id), identityUser))
+      .map( _ => \/-(User(identityUser)))
       .recover { case error =>
-        val title = s"Failed to update user ${userToSave._id}"
+        val title = s"Failed to update user ${identityUser._id}"
         logger.error(title, error)
         -\/(ApiError(title, error.getMessage))
       }

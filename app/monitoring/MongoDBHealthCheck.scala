@@ -2,14 +2,13 @@ package monitoring
 
 import akka.actor.ActorSystem
 import com.gu.identity.util.Logging
-import repositories.UsersReadRepository
 
 import scala.concurrent.duration._
-
 import scala.util.{Failure, Success}
 import javax.inject._
 
 import configuration.Config
+import models.database.mongo.UsersReadRepository
 import play.api.Environment
 
 import scala.concurrent.ExecutionContext

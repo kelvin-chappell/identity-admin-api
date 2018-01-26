@@ -1,12 +1,12 @@
 package actions
 
+import models.client.ClientJsonFormats._
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import javax.inject._
 
 import com.gu.identity.util.Logging
 import configuration.Config
-import models.ApiError
 import org.apache.commons.codec.binary.Base64
 import org.joda.time.{DateTime, DateTimeZone}
 import play.api.http.HeaderNames
@@ -17,7 +17,7 @@ import util.Formats
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import play.api.mvc._
-import models.ApiError._
+import models.client.ApiError
 
 object HmacSigner {
   def sign(date: String, path: String, secret: String): String = {

@@ -1,12 +1,12 @@
 package controllers
 
+import models.client.ClientJsonFormats._
 import javax.inject.{Inject, Singleton}
 
 import actions.{AuthenticatedAction, IdentityUserAction, OrphanUserAction}
 import com.gu.identity.util.Logging
 import com.gu.tip.Tip
 import configuration.Config
-import models._
 import play.api.libs.json._
 import play.api.mvc._
 import services._
@@ -18,8 +18,8 @@ import scalaz.std.string._
 import scalaz.syntax.validation._
 import scalaz.syntax.apply._
 import scalaz.syntax.std.boolean._
-import models.ApiError._
-import models._
+import models.client.{ApiError, UserUpdateRequest, UserUpdateRequestValidator}
+import models.client.ApiError._
 
 @Singleton class UsersController @Inject() (
     cc: ControllerComponents,
@@ -70,9 +70,9 @@ import models._
     request.body.validate[UserUpdateRequest] match {
       case JsSuccess(result, path) =>
         UserUpdateRequestValidator.isValid(result).fold(
-          e => Future(BadRequest(ApiError("Failed to update user", e.message))),
+          error => Future(BadRequest(ApiError("Failed to update user", error.message))),
           validUserUpdateRequest => {
-            EitherT(userService.update(request.user, validUserUpdateRequest)).fold(
+            EitherT(userService.update(request.user.idapiUser, validUserUpdateRequest)).fold(
               error => InternalServerError(error),
               user => {
                 if (Config.stage == "PROD") Tip.verify("User Update")
@@ -89,14 +89,14 @@ import models._
   def delete(id: String) = (auth andThen identityUserAction(id)).async { request =>
     logger.info(s"Deleting user $id")
 
-    val deleteEmailSubscriberF = EitherT(exactTargetService.deleteSubscriber(request.user.email))
+    val deleteEmailSubscriberF = EitherT(exactTargetService.deleteSubscriber(request.user.idapiUser.email))
     val deleteAccountF = EitherT(userService.delete(request.user))
 
     (for {
       _ <- deleteEmailSubscriberF
       _ <- deleteAccountF
     } yield {
-      EmailService.sendDeletionConfirmation(request.user.email)
+      EmailService.sendDeletionConfirmation(request.user.idapiUser.email)
     }).fold(
       error => {
         logger.error(s"Error deleting user $id: $error")
@@ -146,7 +146,7 @@ import models._
 
   def sendEmailValidation(id: String) = (auth andThen identityUserAction(id)).async { request =>
     logger.info(s"Sending email validation for user with id: $id")
-    EitherT(userService.sendEmailValidation(request.user)).fold(
+    EitherT(userService.sendEmailValidation(request.user.idapiUser)).fold(
       error => InternalServerError(error),
       _ => NoContent
     )
@@ -154,7 +154,7 @@ import models._
 
   def validateEmail(id: String) = (auth andThen identityUserAction(id)).async { request =>
     logger.info(s"Validating email for user with id: $id")
-    EitherT(userService.validateEmail(request.user)).fold(
+    EitherT(userService.validateEmail(request.user.idapiUser)).fold(
       error => InternalServerError(error),
       _ => NoContent
     )

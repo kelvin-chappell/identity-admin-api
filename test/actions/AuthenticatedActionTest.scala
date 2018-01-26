@@ -1,6 +1,6 @@
 package actions
 
-import models.ApiError
+import models.client.ApiError
 import org.joda.time.{DateTime, DateTimeZone}
 import org.mockito.Mockito
 import org.mockito.Mockito._

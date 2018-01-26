@@ -3,7 +3,8 @@ package repositories.postgres
 import java.util.UUID
 
 import com.google.common.util.concurrent.MoreExecutors
-import models.{ReservedUsername, ReservedUsernameList}
+import models.client.{ReservedUsername, ReservedUsernameList}
+import models.database.postgres.PostgresReservedUsernameRepository
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{Matchers, WordSpecLike}
 import play.api.libs.json.Json._

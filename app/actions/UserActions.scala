@@ -1,10 +1,11 @@
 package actions
 
+import models.client.ClientJsonFormats._
 import javax.inject.{Inject, Singleton}
 
 import com.gu.tip.Tip
 import configuration.Config
-import models.User
+import models.client.{GuardianUser, User}
 import play.api.mvc.{ActionRefiner, Request, Result, WrappedRequest}
 import play.api.mvc.Results._
 import services.{ExactTargetService, SalesforceService, UserService}
@@ -13,7 +14,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scalaz.std.scalaFuture._
 import scalaz.{-\/, EitherT, \/, \/-}
 
-class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
+class UserRequest[A](val user: GuardianUser, request: Request[A]) extends WrappedRequest[A](request)
 
 @Singleton class IdentityUserAction @Inject() (userService: UserService)(implicit ec: ExecutionContext) {
 
@@ -22,7 +23,7 @@ class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest
 
     override def refine[A](request: Request[A]): Future[Either[Result, UserRequest[A]]] = {
 
-      def findUserById(userId: String): Future[Result \/ User] =
+      def findUserById(userId: String): Future[Result \/ GuardianUser] =
         EitherT(userService.findById(userId)).fold(
           error => -\/(InternalServerError(error)),
           userOpt => userOpt match {
@@ -31,7 +32,7 @@ class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest
           }
         )
 
-      def enrichUserWithProducts(user: User): Future[Result \/ User]  =
+      def enrichUserWithProducts(user: GuardianUser): Future[Result \/ GuardianUser]  =
         EitherT(userService.enrichUserWithProducts(user)).leftMap(InternalServerError(_)).run
 
       (for {
@@ -66,14 +67,16 @@ class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest
           contributions <- contributionsF
         } yield {
 
-          val userRequest = Some(new UserRequest(User(
-            orphan = true,
-            id = "orphan",
-            email = email,
-            subscriptionDetails = subOrphanOpt,
-            exactTargetSubscriber = exactTargetOpt,
-            contributions = contributions
-          ), input))
+          val userRequest = Some(new UserRequest(
+            GuardianUser(
+              idapiUser = User(id = "orphan", email = email),
+              orphan = true,
+              subscriptionDetails = subOrphanOpt,
+              exactTargetSubscriber = exactTargetOpt,
+              contributions = contributions
+            ),
+            input)
+          )
 
           if (subOrphanOpt.isDefined || exactTargetOpt.isDefined || !contributions.isEmpty)
             userRequest

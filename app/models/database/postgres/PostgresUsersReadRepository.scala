@@ -1,11 +1,11 @@
-package repositories.postgres
+package models.database.postgres
 
 import com.google.inject.Inject
 import com.gu.identity.util.Logging
 import configuration.Config.SearchValidation
-import models.{ApiResponse, SearchResponse, User}
+import models.client.{ApiResponse, SearchResponse, User}
+import models.database.mongo.IdentityUser
 import play.api.libs.json.Json
-import repositories.IdentityUser
 import scalikejdbc._
 
 import scala.concurrent.ExecutionContext
@@ -54,7 +54,7 @@ class PostgresUsersReadRepository @Inject()(implicit ec: ExecutionContext) exten
              """.stripMargin
     readOnly { implicit session =>
       val user = sql.map(rs => Json.parse(rs.string(1)).as[IdentityUser]).single.apply
-      user.map(User.fromIdentityUser)
+      user.map(User.apply)
     }(logFailure("Failed to search users table"))
   }
 }

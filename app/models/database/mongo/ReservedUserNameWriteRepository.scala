@@ -1,18 +1,19 @@
-package repositories
+package models.database.mongo
 
 import javax.inject.{Inject, Singleton}
 
 import com.gu.identity.util.Logging
-import models.{ApiError, ApiResponse, ReservedUsername, ReservedUsernameList}
+import models.client
+import models.client.{ApiError, ApiResponse, ReservedUsername, ReservedUsernameList}
 import play.api.libs.json.Json
 import play.modules.reactivemongo.ReactiveMongoApi
 import reactivemongo.api.{Cursor, ReadPreference}
-import reactivemongo.play.json.collection._
 import reactivemongo.play.json._
+import reactivemongo.play.json.collection._
 
 import scala.concurrent.ExecutionContext
-import scalaz.{-\/, OptionT, \/-}
 import scalaz.std.scalaFuture._
+import scalaz.{-\/, OptionT, \/-}
 
 @Singleton class ReservedUserNameWriteRepository @Inject() (
     environment: play.api.Environment,
@@ -57,7 +58,7 @@ import scalaz.std.scalaFuture._
       listOfReservedUsernames <- listOfReservedUsernamesF
       listOfUsernames = listOfReservedUsernames.map(_.username)
     } yield {
-      \/-(ReservedUsernameList(listOfUsernames))
+      \/-(client.ReservedUsernameList(listOfUsernames))
     }).recover { case error =>
       val title = "Failed to load reserved usernames list"
       logger.error(title, error)

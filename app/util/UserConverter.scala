@@ -1,6 +1,6 @@
 package util
 
-import models.{GNMMadgexUser, MadgexUser, User, UserUpdateRequest}
+import models.client.{GNMMadgexUser, MadgexUser, User, UserUpdateRequest}
 
 object UserConverter{
 

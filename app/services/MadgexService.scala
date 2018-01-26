@@ -5,7 +5,7 @@ import javax.inject.{Inject, Singleton}
 import com.gu.identity.util.Logging
 import configuration.Config
 import util.UserConverter._
-import models.{GNMMadgexUser, MadgexUser}
+import models.client.{GNMMadgexUser, MadgexUser}
 import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 

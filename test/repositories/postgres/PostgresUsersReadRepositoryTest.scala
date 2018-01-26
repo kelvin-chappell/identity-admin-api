@@ -1,12 +1,13 @@
 package repositories.postgres
 
 import com.google.common.util.concurrent.MoreExecutors
-import models.{ApiResponse, SearchResponse}
+import models.client.{ApiResponse, SearchResponse}
+import models.database.mongo.{IdentityUser, PrivateFields, SearchFields, UserDates}
+import models.database.postgres.PostgresUsersReadRepository
 import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{Matchers, WordSpecLike}
 import play.api.libs.json.Json
-import repositories.{IdentityUser, PrivateFields, SearchFields, UserDates}
 import scalikejdbc._
 import support.EmbeddedPostgresSupport
 

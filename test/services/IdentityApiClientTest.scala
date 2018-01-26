@@ -1,7 +1,7 @@
 package services
 
 import mockws.MockWS
-import models.ApiError
+import models.client.ApiError
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Matchers, WordSpec}
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.mvc.Action

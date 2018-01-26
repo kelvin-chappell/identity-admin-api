@@ -4,7 +4,7 @@ import javax.inject.{Inject, Singleton}
 
 import com.gu.identity.util.Logging
 import configuration.Config
-import models.{ApiError, ApiResponse}
+import models.client.{ApiError, ApiResponse}
 import play.api.http.Status
 import play.api.libs.json.Json
 import play.api.libs.ws.WSClient

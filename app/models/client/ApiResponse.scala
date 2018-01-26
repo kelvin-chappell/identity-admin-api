@@ -1,6 +1,8 @@
+package models
+
 import scala.concurrent.Future
 import scalaz.\/
 
-package object models {
+package object client {
   type ApiResponse[T] = Future[ApiError \/ T]
 }

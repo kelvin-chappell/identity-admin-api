@@ -4,7 +4,7 @@ import javax.inject.{Inject, Singleton}
 
 import com.gu.identity.util.Logging
 import configuration.Config.TouchpointSalesforce._
-import models._
+import models.client._
 import play.api.libs.json.{JsArray, Json}
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.http.Status.OK

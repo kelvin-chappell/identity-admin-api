@@ -3,8 +3,8 @@ package support
 import java.nio.file.Paths
 
 import de.flapdoodle.embed.process.config.IRuntimeConfig
+import models.database.postgres.PostgresJsonFormats
 import org.scalatest.{BeforeAndAfterAll, Suite}
-import repositories.postgres.PostgresJsonFormats
 import ru.yandex.qatools.embed.postgresql.EmbeddedPostgres
 import ru.yandex.qatools.embed.postgresql.distribution.Version
 import scalikejdbc._

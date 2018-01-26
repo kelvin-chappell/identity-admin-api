@@ -8,10 +8,11 @@ import ai.x.diff._
 import ai.x.diff.conversions._
 import com.gu.identity.util.Logging
 import configuration.Config.PublishEvents.eventsEnabled
-import models._
+import models.{client, _}
+import models.client._
+import models.database.mongo._
+import models.database.postgres.{PostgresDeletedUserRepository, PostgresReservedUsernameRepository, PostgresUsersReadRepository}
 import org.joda.time.DateTime
-import repositories._
-import repositories.postgres._
 import uk.gov.hmrc.emailaddress.EmailAddress
 import util.UserConverter._
 import util.scientist.{Defaults, Experiment, ExperimentSettings}
@@ -34,8 +35,8 @@ import scalaz.{-\/, EitherT, \/-}
     discussionService: DiscussionService,
     postgresDeletedUserRepository: PostgresDeletedUserRepository,
     postgresUsersReadRepository: PostgresUsersReadRepository,
-    postgresReservedUsernameRepository: PostgresReservedUsernameRepository
-)(implicit ec: ExecutionContext) extends Logging {
+    postgresReservedUsernameRepository: PostgresReservedUsernameRepository)
+    (implicit ec: ExecutionContext) extends Logging {
 
   implicit val dateTimeDiffShow: DiffShow[DateTime] = new DiffShow[DateTime] {
     def show ( d: DateTime ) = "DateTime(" + d.toString + ")"
@@ -46,38 +47,37 @@ import scalaz.{-\/, EitherT, \/-}
   private implicit val futureMonad =
     cats.instances.future.catsStdInstancesForFuture(ec)
 
-  def update(user: User, userUpdateRequest: UserUpdateRequest): ApiResponse[User] = {
-    val emailValid = isEmailValid(user, userUpdateRequest)
-    val usernameValid = isUsernameValid(user, userUpdateRequest)
+  def update(existingUser: User, userUpdateRequest: UserUpdateRequest): ApiResponse[User] = {
+    val emailValid = isEmailValid(existingUser, userUpdateRequest)
+    val usernameValid = isUsernameValid(existingUser, userUpdateRequest)
 
     (emailValid, usernameValid) match {
       case (true, true) =>
-        val userEmailChanged = !user.email.equalsIgnoreCase(userUpdateRequest.email)
-        val userEmailValidated = if(userEmailChanged) Some(false) else user.status.userEmailValidated
-        val userEmailValidatedChanged = isEmailValidationChanged(userEmailValidated, user.status.userEmailValidated)
-        val usernameChanged = isUsernameChanged(userUpdateRequest.username, user.username)
-        val displayNameChanged = isDisplayNameChanged(userUpdateRequest.displayName, user.displayName)
-        val update = IdentityUserUpdate(userUpdateRequest, userEmailValidated)
+        val userEmailChanged = !existingUser.email.equalsIgnoreCase(userUpdateRequest.email)
+        val userEmailValidated = if(userEmailChanged) Some(false) else existingUser.status.userEmailValidated
+        val userEmailValidatedChanged = isEmailValidationChanged(userEmailValidated, existingUser.status.userEmailValidated)
+        val usernameChanged = isUsernameChanged(userUpdateRequest.username, existingUser.username)
+        val displayNameChanged = isDisplayNameChanged(userUpdateRequest.displayName, existingUser.displayName)
 
-        EitherT(usersWriteRepository.update(user, update)).map { result =>
+        EitherT(usersWriteRepository.update(existingUser, userUpdateRequest)).map { result =>
           triggerEvents(
-            userId = user.id,
+            userId = existingUser.id,
             usernameChanged = usernameChanged,
             displayNameChanged = displayNameChanged,
             emailValidatedChanged = userEmailValidatedChanged
           )
 
           if(userEmailChanged) {
-            identityApiClient.sendEmailValidation(user.id)
-            exactTargetService.updateEmailAddress(user.email, userUpdateRequest.email)
+            identityApiClient.sendEmailValidation(existingUser.id)
+            exactTargetService.updateEmailAddress(existingUser.email, userUpdateRequest.email)
           }
 
           if (userEmailChanged && eventsEnabled) {
-            salesforceIntegration.enqueueUserUpdate(user.id, userUpdateRequest.email)
+            salesforceIntegration.enqueueUserUpdate(existingUser.id, userUpdateRequest.email)
           }
 
-          if (isJobsUser(user) && isJobsUserChanged(user, userUpdateRequest)) {
-            madgexService.update(GNMMadgexUser(user.id, userUpdateRequest))
+          if (isJobsUser(existingUser) && isJobsUserChanged(existingUser, userUpdateRequest)) {
+            madgexService.update(client.GNMMadgexUser(existingUser.id, userUpdateRequest))
           }
 
           result
@@ -244,9 +244,14 @@ import scalaz.{-\/, EitherT, \/-}
   }
 
   /* If it cannot find an active user, tries looking up a deleted one */
-  def findById(id: String): ApiResponse[Option[User]] = {
-    def deletedUserToActiveUser(userOpt: Option[DeletedUser]): Option[User] =
-      userOpt.map(user => User(id = user.id, email = user.email, username = Some(user.username), deleted = true))
+  def findById(id: String): ApiResponse[Option[GuardianUser]] = {
+    def deletedUserToActiveUser(userOpt: Option[DeletedUser]): Option[GuardianUser] =
+      userOpt.map(
+        user =>
+          GuardianUser(
+            idapiUser = User(id = user.id, email = user.email, username = Some(user.username)),
+            deleted = true)
+      )
 
     val deletedUserOptF = EitherT(deletedUsersRepository.findBy(id))
     val activeUserOptF = EitherT(usersReadRepository.find(id))
@@ -256,21 +261,21 @@ import scalaz.{-\/, EitherT, \/-}
       deletedUserOpt <- deletedUserOptF
     } yield {
       if (activeUserOpt.isDefined)
-        activeUserOpt
+        activeUserOpt.map(idapiUser => GuardianUser(idapiUser = idapiUser))
       else
         deletedUserToActiveUser(deletedUserOpt)
     }).run
   }
 
-  def delete(user: User): ApiResponse[ReservedUsernameList] = {
+  def delete(user: GuardianUser): ApiResponse[ReservedUsernameList] = {
     val reservedUsernameExperiment = Experiment.async(
       "loadReservedUsernames",
       reservedUserNameRepository.loadReservedUsernames,
       postgresReservedUsernameRepository.loadReservedUsernames
     )
     (for {
-      _ <- EitherT(usersWriteRepository.delete(user))
-      reservedUsernameList <- EitherT(user.username.fold(reservedUsernameExperiment.run)(reservedUserNameRepository.addReservedUsername(_)))
+      _ <- EitherT(usersWriteRepository.delete(user.idapiUser))
+      reservedUsernameList <- EitherT(user.idapiUser.username.fold(reservedUsernameExperiment.run)(reservedUserNameRepository.addReservedUsername(_)))
     } yield (reservedUsernameList)).run
   }
 
@@ -288,12 +293,12 @@ import scalaz.{-\/, EitherT, \/-}
   def unsubscribeFromMarketingEmails(email: String): ApiResponse[User] =
     usersWriteRepository.unsubscribeFromMarketingEmails(email)
 
-  def enrichUserWithProducts(user: User) = {
-    val subscriptionF = EitherT(salesforceService.getSubscriptionByIdentityId(user.id))
-    val membershipF = EitherT(salesforceService.getMembershipByIdentityId(user.id))
-    val hasCommentedF = EitherT(discussionService.hasCommented(user.id))
-    val exactTargetSubF = EitherT(exactTargetService.subscriberByIdentityId(user.id))
-    val contributionsF = EitherT(exactTargetService.contributionsByIdentityId(user.id))
+  def enrichUserWithProducts(user: GuardianUser): ApiResponse[GuardianUser]  = {
+    val subscriptionF = EitherT(salesforceService.getSubscriptionByIdentityId(user.idapiUser.id))
+    val membershipF = EitherT(salesforceService.getMembershipByIdentityId(user.idapiUser.id))
+    val hasCommentedF = EitherT(discussionService.hasCommented(user.idapiUser.id))
+    val exactTargetSubF = EitherT(exactTargetService.subscriberByIdentityId(user.idapiUser.id))
+    val contributionsF = EitherT(exactTargetService.contributionsByIdentityId(user.idapiUser.id))
 
     (for {
       subscription <- subscriptionF

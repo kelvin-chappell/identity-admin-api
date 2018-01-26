@@ -1,7 +1,7 @@
-package repositories
+package models.database.mongo
 
-import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 case class DeletedUser(
   id: String,

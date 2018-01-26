@@ -5,7 +5,7 @@ import cats.instances.all._
 import cats.instances.future
 import cats.{Id, Monad}
 import com.google.common.util.concurrent.MoreExecutors
-import models.{ApiError, UserSummary}
+import models.client.{ApiError, UserSummary}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{FlatSpec, Matchers}

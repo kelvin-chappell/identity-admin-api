@@ -1,5 +1,6 @@
 package repositories.postgres
 
+import models.database.postgres.PostgresJsonFormats
 import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.{Matchers, WordSpecLike}
 import play.api.libs.json.{JsString, JsSuccess}
