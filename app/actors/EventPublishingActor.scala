@@ -33,7 +33,7 @@ class EventPublishingActor(amazonSNSAsyncClient: AmazonSNSAsync) extends Actor w
   lazy val displayNameChangedTopicArn = Config.PublishEvents.displayNameChangedEventSnsArn
 
   override def receive: Receive = {
-    case emailValidationChanged: EmailValidationChanged => {
+    case emailValidationChanged: EmailValidationChanged =>
       logger.info(s"Sending email validation changed event to SNS for user ${emailValidationChanged.userId}")
       val subject = "E-mail Validation Changed"
       val message: String = write(emailValidationChanged)
@@ -41,8 +41,8 @@ class EventPublishingActor(amazonSNSAsyncClient: AmazonSNSAsync) extends Actor w
         case Success(_) => logger.trace("Published to SNS message {}", message)
         case Failure(e) => logger.error(s"Could not publish event to E-mail validation changed SNS for user ID ${emailValidationChanged.userId}", e)
       }
-    }
-    case displayNameChanged: DisplayNameChanged => {
+
+    case displayNameChanged: DisplayNameChanged =>
       logger.info(s"Sending displayname changed event to SNS for user ${displayNameChanged.userId}")
       val subject = "Display Name Changed"
       val message: String = write(displayNameChanged)
@@ -50,7 +50,8 @@ class EventPublishingActor(amazonSNSAsyncClient: AmazonSNSAsync) extends Actor w
         case Success(_) => logger.trace("Published to SNS message {}", message)
         case Failure(e) => logger.error(s"Could not publish event to displayname changed SNS for user ID ${displayNameChanged.userId}", e)
       }
-    }
-    case unknown => logger.error(s"Received unsupported event in EventPublishingActor: $unknown")
+
+    case unknown =>
+      logger.error(s"Received unsupported event in EventPublishingActor: $unknown")
   }
 }

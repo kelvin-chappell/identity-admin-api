@@ -30,7 +30,7 @@ class PostgresDeletedUserRepositoryTest extends WordSpecLike
       whenReady(repo.search("1234")) { result =>
         val \/-(searchResponse) = result
         searchResponse.total shouldBe 1
-        searchResponse.results should not be(empty)
+        searchResponse.results should not be empty
       }
     }
 
@@ -38,7 +38,7 @@ class PostgresDeletedUserRepositoryTest extends WordSpecLike
       whenReady(repo.search("foo@example.com")) { result =>
         val \/-(searchResponse) = result
         searchResponse.total shouldBe 1
-        searchResponse.results should not be(empty)
+        searchResponse.results should not be empty
       }
     }
 
@@ -46,7 +46,7 @@ class PostgresDeletedUserRepositoryTest extends WordSpecLike
       whenReady(repo.search("admin")) { result =>
         val \/-(searchResponse) = result
         searchResponse.total shouldBe 1
-        searchResponse.results should not be(empty)
+        searchResponse.results should not be empty
       }
     }
 
