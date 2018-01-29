@@ -172,8 +172,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
     "not update madgex when jobs user as not changed" in {
       val user = User("id", "email@theguardian.com")
       val userUpdateRequest = UserUpdateRequest(email = "email@theguardian.com", username = Some("username"))
-      val gNMMadgexUser = GNMMadgexUser(user.id, userUpdateRequest)
-      
+
       val updatedUser = user.copy(email = userUpdateRequest.email)
 
       when(userWriteRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))

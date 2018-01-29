@@ -26,7 +26,7 @@ class UserRequest[A](val user: GuardianUser, request: Request[A]) extends Wrappe
       def findUserById(userId: String): Future[Result \/ GuardianUser] =
         EitherT(userService.findById(userId)).fold(
           error => -\/(InternalServerError(error)),
-          userOpt => userOpt match {
+          {
             case Some(user) => \/-(user)
             case None => -\/(NotFound)
           }
@@ -78,7 +78,7 @@ class UserRequest[A](val user: GuardianUser, request: Request[A]) extends Wrappe
             input)
           )
 
-          if (subOrphanOpt.isDefined || exactTargetOpt.isDefined || !contributions.isEmpty)
+          if (subOrphanOpt.isDefined || exactTargetOpt.isDefined || contributions.nonEmpty)
             userRequest
           else
             None

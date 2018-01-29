@@ -41,7 +41,7 @@ case class SubscriptionId(value: String, fieldName: String = "Subscription_Name_
 
   private lazy val sfAuth: SFAuthentication = {
     logger.info("Authenticating with Salesforce...")
-    val authEndpoint = s"${apiUrl}/services/oauth2/token"
+    val authEndpoint = s"$apiUrl/services/oauth2/token"
 
     val param = Map(
       "client_id" -> consumerKey,
@@ -58,8 +58,8 @@ case class SubscriptionId(value: String, fieldName: String = "Subscription_Name_
     response match {
       case Success(res) =>
         if (res.status == OK) Json.parse(res.body).as[SFAuthentication]
-        else throw new SalesforceError(s"Authentication failure: ${res.body.toString}")
-      case Failure(e) => throw new SalesforceError(s"${e.getMessage}")
+        else throw SalesforceError(s"Authentication failure: ${res.body.toString}")
+      case Failure(e) => throw SalesforceError(s"${e.getMessage}")
     }
   }
 
@@ -126,9 +126,9 @@ case class SubscriptionId(value: String, fieldName: String = "Subscription_Name_
       |    Zuora__Subscription__r.Zuora__CustomerAccount__r.Contact__r.Email,
       |    Zuora__Subscription__r.Zuora__CustomerAccount__r.Contact__r.Name,
       |
-      |    ${selectQuerySectionDeliveryAddress},
+      |    $selectQuerySectionDeliveryAddress,
       |
-      |    ${selectQuerySectionBillingAddress},
+      |    $selectQuerySectionBillingAddress,
       |
       |    Zuora__ProductName__c,
       |    Subscription_Status__c,

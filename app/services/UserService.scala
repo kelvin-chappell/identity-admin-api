@@ -97,7 +97,7 @@ import scalaz.{-\/, EitherT, \/-}
 
   def isJobsUser(user: User) = isAMemberOfGroup("/sys/policies/guardian-jobs", user)
 
-  def isAMemberOfGroup(groupPath: String, user: User): Boolean = user.groups.filter(_.path == groupPath).size > 0
+  def isAMemberOfGroup(groupPath: String, user: User): Boolean = user.groups.exists(_.path == groupPath)
 
   def isEmailValidationChanged(newEmailValidated: Option[Boolean], existingEmailValidated: Option[Boolean]): Boolean =
     newEmailValidated != existingEmailValidated
@@ -168,11 +168,11 @@ import scalaz.{-\/, EitherT, \/-}
     } yield {
       val idUsers = combineSearchResults(activeUsers, deletedUsers)
 
-      if (idUsers.results.size > 0)
+      if (idUsers.results.nonEmpty)
         idUsers
-      else if (usersBySubId.results.size > 0)
+      else if (usersBySubId.results.nonEmpty)
         usersBySubId
-      else if (orphans.results.size > 0)
+      else if (orphans.results.nonEmpty)
         orphans
       else
         usersByMemNum
@@ -197,7 +197,7 @@ import scalaz.{-\/, EitherT, \/-}
         newsOrphanOpt <- newsOrphanOptF
         contributionsList <- contributionsListF
       } yield {
-        if (subOrphanOpt.isDefined || newsOrphanOpt.isDefined || !contributionsList.isEmpty)
+        if (subOrphanOpt.isDefined || newsOrphanOpt.isDefined || contributionsList.nonEmpty)
           orphanSearchResponse
         else
           emptySearchResponse
@@ -275,8 +275,8 @@ import scalaz.{-\/, EitherT, \/-}
     )
     (for {
       _ <- EitherT(usersWriteRepository.delete(user.idapiUser))
-      reservedUsernameList <- EitherT(user.idapiUser.username.fold(reservedUsernameExperiment.run)(reservedUserNameRepository.addReservedUsername(_)))
-    } yield (reservedUsernameList)).run
+      reservedUsernameList <- EitherT(user.idapiUser.username.fold(reservedUsernameExperiment.run)(reservedUserNameRepository.addReservedUsername))
+    } yield reservedUsernameList).run
   }
 
   def validateEmail(user: User, emailValidated: Boolean = true): ApiResponse[Unit] =

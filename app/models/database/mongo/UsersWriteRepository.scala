@@ -37,14 +37,14 @@ import scalaz.{-\/, EitherT, OptionT, \/-}
     (for {
       persistedUser <- EitherT(findBy(user.id))
       updatedUser <- EitherT(doUpdate(persistedUser.mergeWith(userUpdateRequest)))
-    } yield (updatedUser)).run
+    } yield updatedUser).run
 
   def updateEmailValidationStatus(user: User, emailValidated: Boolean): ApiResponse[User] =
     (for {
       persistedUser <- EitherT(findBy(user.id))
       statusFields = persistedUser.statusFields.getOrElse(StatusFields()).copy(userEmailValidated = Some(emailValidated))
       updatedUser <- EitherT(doUpdate(persistedUser.copy(statusFields = Some(statusFields))))
-    } yield (updatedUser)).run
+    } yield updatedUser).run
 
   private def doUpdate(identityUser: IdentityUser): ApiResponse[User] =
     usersF
@@ -71,5 +71,5 @@ import scalaz.{-\/, EitherT, OptionT, \/-}
       persistedUser <- EitherT(findBy(email))
       statusFields = persistedUser.statusFields.getOrElse(StatusFields()).copy(receive3rdPartyMarketing = Some(false), receiveGnmMarketing = Some(false))
       updatedUser <- EitherT(doUpdate(persistedUser.copy(statusFields = Some(statusFields))))
-    } yield (updatedUser)).run
+    } yield updatedUser).run
 }

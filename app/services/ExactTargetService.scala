@@ -66,14 +66,13 @@ import scala.util.{Failure, Success, Try}
     def subscriberIsActive(subscriber: ETSubscriber) = subscriber.getStatus == ETSubscriber.Status.ACTIVE
 
     EitherT(retrieveSubscriber(email, etClientEditorial)).map {
-      case Some(subscriber) => {
+      case Some(subscriber) =>
         val activeList = activeNewsletterSubscriptions(subscriber.getSubscriptions.toList)
 
-        if (subscriberIsActive(subscriber) && !activeList.isEmpty)
+        if (subscriberIsActive(subscriber) && activeList.nonEmpty)
           Some(NewslettersSubscription(activeList))
         else
           None
-      }
 
       case None => None
     }.run
@@ -326,7 +325,7 @@ import scala.util.{Failure, Success, Try}
     if (etResponse.getResponseCode == "OK")
       \/-{}
     else {
-      logger.error(s"${title}: ${etResponse.getResponseMessage}")
+      logger.error(s"$title: ${etResponse.getResponseMessage}")
       -\/(ApiError(title, etResponse.getResponseMessage))
     }
 

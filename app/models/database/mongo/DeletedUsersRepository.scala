@@ -31,12 +31,12 @@ import scalaz.{-\/, EitherT, \/-}
     }
 
   def search(query: String): ApiResponse[SearchResponse] =
-    (EitherT(findBy(query)).map { userOpt =>
-      userOpt match {
-        case Some(user) => SearchResponse.create(1, 0, List(IdentityUser(user.email, user.id)))
-        case None => SearchResponse.create(0, 0, Nil)
-      }
-    }).run
+    EitherT(findBy(query))
+      .map({
+          case Some(user) => SearchResponse.create(1, 0, List(IdentityUser(user.email, user.id)))
+          case None => SearchResponse.create(0, 0, Nil)
+        })
+      .run
 
   def insert(id: String, email: String, username: String) =
     reservedEmailsF.flatMap(_.insert[DeletedUser](DeletedUser(id, email, username)))

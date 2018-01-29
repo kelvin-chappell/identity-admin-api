@@ -48,7 +48,7 @@ class PostgresUsersReadRepositoryTest extends WordSpecLike
     def checkOneResult(f: => ApiResponse[SearchResponse]) = whenReady(f) { result =>
       val \/-(searchResponse) = result
       searchResponse.total shouldBe 1
-      searchResponse.results should not be (empty)
+      searchResponse.results should not be empty
     }
 
     "find a user when their email address matches the query" in new TestFixture {
@@ -96,7 +96,7 @@ class PostgresUsersReadRepositoryTest extends WordSpecLike
   "UserReadRepository#find" should {
     "Find a single user" in new TestFixture {
       whenReady(repo.find("identitydev@guardian.co.uk")) {
-        case \/-(maybeUser) => maybeUser should not be(empty)
+        case \/-(maybeUser) => maybeUser should not be empty
         case _ => fail("expected to find a user")
       }
     }

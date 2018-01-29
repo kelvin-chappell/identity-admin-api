@@ -38,7 +38,7 @@ class PostgresReservedUsernameRepositoryTest extends WordSpecLike
     "load all reserved usernames" in new TestFixture {
       whenReady(repo.loadReservedUsernames) {
         case \/-(ReservedUsernameList(actualNames)) =>
-          actualNames should contain theSameElementsAs(usernames.map(_.username))
+          actualNames should contain theSameElementsAs usernames.map(_.username)
         case _ => fail("failed to read a username list")
       }
     }
