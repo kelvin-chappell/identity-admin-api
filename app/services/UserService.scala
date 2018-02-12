@@ -24,10 +24,8 @@ import scalaz.{-\/, EitherT, \/-}
 @Singleton class UserService @Inject()(
     usersReadRepository: UsersReadRepository,
     usersWriteRepository: UsersWriteRepository,
-    reservedUserNameRepository: ReservedUserNameWriteRepository,
     identityApiClient: IdentityApiClient,
     eventPublishingActorProvider: EventPublishingActorProvider,
-    deletedUsersRepository: DeletedUsersRepository,
     salesforceService: SalesforceService,
     salesforceIntegration: SalesforceIntegration,
     madgexService: MadgexService,
@@ -152,12 +150,7 @@ import scalaz.{-\/, EitherT, \/-}
         postgresUsersReadRepository.search(query, limit, offset)
       ).run
     )
-    val deletedUsersF = EitherT(
-      Experiment.async("deletedUser",
-        deletedUsersRepository.search(query),
-        postgresDeletedUserRepository.search(query)
-      ).run
-    )
+    val deletedUsersF = EitherT(postgresDeletedUserRepository.search(query))
 
     (for {
       usersByMemNum <- usersByMemNumF
@@ -179,7 +172,7 @@ import scalaz.{-\/, EitherT, \/-}
     }).run
   }
 
-  def unreserveEmail(id: String) = deletedUsersRepository.remove(id)
+  def unreserveEmail(id: String) = postgresDeletedUserRepository.remove(id)
 
   def searchOrphan(email: String): ApiResponse[SearchResponse] = {
     def isEmail(query: String) = query.matches("""^[a-zA-Z0-9\.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r.toString())
@@ -253,7 +246,7 @@ import scalaz.{-\/, EitherT, \/-}
             deleted = true)
       )
 
-    val deletedUserOptF = EitherT(deletedUsersRepository.findBy(id))
+    val deletedUserOptF = EitherT(postgresDeletedUserRepository.findBy(id))
     val activeUserOptF = EitherT(usersReadRepository.find(id))
 
     (for {
@@ -268,14 +261,10 @@ import scalaz.{-\/, EitherT, \/-}
   }
 
   def delete(user: GuardianUser): ApiResponse[ReservedUsernameList] = {
-    val reservedUsernameExperiment = Experiment.async(
-      "loadReservedUsernames",
-      reservedUserNameRepository.loadReservedUsernames,
-      postgresReservedUsernameRepository.loadReservedUsernames
-    )
+    val reserveUsernameResult = user.idapiUser.username.fold(postgresReservedUsernameRepository.loadReservedUsernames)(postgresReservedUsernameRepository.addReservedUsername)
     (for {
       _ <- EitherT(usersWriteRepository.delete(user.idapiUser))
-      reservedUsernameList <- EitherT(user.idapiUser.username.fold(reservedUsernameExperiment.run)(reservedUserNameRepository.addReservedUsername))
+      reservedUsernameList <- EitherT(reserveUsernameResult)
     } yield reservedUsernameList).run
   }
 

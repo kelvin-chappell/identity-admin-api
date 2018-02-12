@@ -85,5 +85,6 @@ object Config {
     val jdbcUrl = config.getString("postgres.jdbcUrl")
     val username = config.getString("postgres.username")
     val password = config.getString("postgres.password")
+    val poolSize = config.getInt("postgres.maxPoolSize")
   }
 }

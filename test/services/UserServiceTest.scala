@@ -24,10 +24,8 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
 
   val userReadRepo = mock[UsersReadRepository]
   val userWriteRepo = mock[UsersWriteRepository]
-  val reservedUsernameRepo = mock[ReservedUserNameWriteRepository]
   val identityApiClient = mock[IdentityApiClient]
   val eventPublishingActorProvider = mock[EventPublishingActorProvider]
-  val deletedUsersRepository = mock[DeletedUsersRepository]
   val salesforceService = mock[SalesforceService]
   val salesforceIntegration = mock[SalesforceIntegration]
   val madgexService = mock[MadgexService]
@@ -38,12 +36,12 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
   val pgReservedUsernameRepo = mock[PostgresReservedUsernameRepository]
 
   val service =
-    spy(new UserService(userReadRepo, userWriteRepo, reservedUsernameRepo, identityApiClient,
-      eventPublishingActorProvider, deletedUsersRepository, salesforceService, salesforceIntegration, madgexService, exactTargetService,
+    spy(new UserService(userReadRepo, userWriteRepo, identityApiClient,
+      eventPublishingActorProvider, salesforceService, salesforceIntegration, madgexService, exactTargetService,
       discussionService, pgDeletedUserRepo, pgUserReadRepo, pgReservedUsernameRepo))
 
   before {
-    Mockito.reset(userReadRepo, userWriteRepo, reservedUsernameRepo, identityApiClient, eventPublishingActorProvider, service, madgexService)
+    Mockito.reset(userReadRepo, userWriteRepo, identityApiClient, eventPublishingActorProvider, service, madgexService)
   }
 
   "isUsernameChanged" should {
@@ -225,14 +223,14 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
       val username = "testuser"
       val user = GuardianUser(User("id", "email", username = Some(username)))
       when(userWriteRepo.delete(user.idapiUser)).thenReturn(Future.successful(\/-{}))
-      when(reservedUsernameRepo.addReservedUsername(username)).thenReturn(Future.successful(\/-(ReservedUsernameList(List(username)))))
+      when(pgReservedUsernameRepo.addReservedUsername(username)).thenReturn(Future.successful(\/-(ReservedUsernameList(List(username)))))
       Await.result(service.delete(user), 1.second) shouldEqual \/-(ReservedUsernameList(List(username)))
     }
 
     "remove the given user and return existing reserved usernames when user has no username" in {
       val user = GuardianUser(User("id", "email", username = None))
       when(userWriteRepo.delete(user.idapiUser)).thenReturn(Future.successful(\/-{}))
-      when(reservedUsernameRepo.loadReservedUsernames).thenReturn(Future.successful(\/-(ReservedUsernameList(Nil))))
+      when(pgReservedUsernameRepo.loadReservedUsernames).thenReturn(Future.successful(\/-(ReservedUsernameList(Nil))))
       Await.result(service.delete(user), 1.second) shouldEqual \/-(ReservedUsernameList(Nil))
     }
 

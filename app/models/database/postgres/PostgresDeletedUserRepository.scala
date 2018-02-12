@@ -31,6 +31,17 @@ import scalaz.\/-
     )
   }(logFailure(s"Failed to find deleted users for query: $query"))
 
+  def remove(id: String): ApiResponse[Int] = {
+    val sqlQuery =
+      sql"""
+           | DELETE FROM reservedemails
+           | WHERE id=${id}
+       """.stripMargin
+    localTx { implicit session =>
+      sqlQuery.update().apply()
+    }(logFailure(s"Failed to unreserve email for id $id"))
+  }
+
   def search(query: String): ApiResponse[SearchResponse] = findBy(query).map {
     case \/-(Some(user)) =>
       \/-(SearchResponse.create(1, 0, List(IdentityUser(user.email, user.id))))

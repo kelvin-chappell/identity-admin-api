@@ -11,7 +11,7 @@ import scalikejdbc._
 
 import scala.collection.JavaConverters._
 
-trait EmbeddedPostgresSupport extends BeforeAndAfterAll with PostgresJsonFormats {
+trait EmbeddedPostgresSupport extends BeforeAndAfterAll {
   self: Suite =>
 
   lazy val postgres = new EmbeddedPostgres(Version.V9_6_3)
@@ -56,6 +56,9 @@ trait EmbeddedPostgresSupport extends BeforeAndAfterAll with PostgresJsonFormats
     stopPostgres()
     super.afterAll()
   }
+}
+
+trait PgTestUtils extends PostgresJsonFormats {
 
   def execSql(sql: SQL[Nothing, NoExtractor]): Int =
     DB.localTx { implicit session =>

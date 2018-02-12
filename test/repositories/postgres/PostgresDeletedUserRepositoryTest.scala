@@ -3,16 +3,17 @@ package repositories.postgres
 import com.google.common.util.concurrent.MoreExecutors
 import models.database.postgres.PostgresDeletedUserRepository
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.{DoNotDiscover, Matchers, WordSpecLike}
 import scalikejdbc._
-import support.EmbeddedPostgresSupport
+import support.PgTestUtils
 
 import scala.concurrent.ExecutionContext
 import scalaz.\/-
 
+@DoNotDiscover
 class PostgresDeletedUserRepositoryTest extends WordSpecLike
   with Matchers
-  with EmbeddedPostgresSupport
+  with PgTestUtils
   with ScalaFutures {
 
   trait TestFixture {
@@ -58,5 +59,14 @@ class PostgresDeletedUserRepositoryTest extends WordSpecLike
       }
     }
   }
-
+  "DeletedUserRepository#remove" should {
+    "Delete the reserved email for the passed in id" in new TestFixture {
+      whenReady(repo.remove("1234")) { case \/-(result) =>
+        result shouldBe 1
+      }
+      whenReady(repo.search("1234")) { case \/-(result) =>
+        result.total shouldBe 0
+      }
+    }
+  }
 }

@@ -7,11 +7,13 @@ import models.client.{ApiError, ApiResponse, SearchResponse}
 import play.api.libs.json.Json
 import play.modules.reactivemongo.ReactiveMongoApi
 import reactivemongo.api.ReadPreference
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONDocument
 import reactivemongo.play.json._
 import reactivemongo.play.json.collection._
+
 import scalaz.std.scalaFuture._
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scalaz.{-\/, EitherT, \/-}
 
 @Singleton class DeletedUsersRepository @Inject()(
@@ -38,10 +40,10 @@ import scalaz.{-\/, EitherT, \/-}
         })
       .run
 
-  def insert(id: String, email: String, username: String) =
+  def insert(id: String, email: String, username: String): Future[WriteResult] =
     reservedEmailsF.flatMap(_.insert[DeletedUser](DeletedUser(id, email, username)))
 
-  def remove(id: String) =
+  def remove(id: String): Future[WriteResult] =
     reservedEmailsF.flatMap(_.remove(BSONDocument("_id" -> id), firstMatchOnly = true))
 
   private def buildSearchQuery(query: String) =

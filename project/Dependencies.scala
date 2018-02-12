@@ -28,7 +28,7 @@ object Dependencies {
     "org.postgresql"              %   "postgresql"            % "42.1.4",
 
     "ru.yandex.qatools.embed"     %   "postgresql-embedded"   % "2.4"             % "test",
-    "org.scalatest"               %%  "scalatest"             % "3.0.1"           % "test",
+    "org.scalatest"               %%  "scalatest"             % "3.0.5"           % "test",
     "com.github.simplyscala"      %%  "scalatest-embedmongo"  % "0.2.3"           % "test",
     "de.leanovate.play-mockws"    %%  "play-mockws"           % "2.6.0"           % "test",
     "org.scalatestplus.play"      %%  "scalatestplus-play"    % "3.1.1"           % "test",

@@ -16,6 +16,7 @@ class PostgresModule extends Module {
       config.setJdbcUrl(Postgres.jdbcUrl)
       config.setUsername(Postgres.username)
       config.setPassword(Postgres.password)
+      config.setMaximumPoolSize(Postgres.poolSize)
       new HikariDataSource(config)
     }
     ConnectionPool.singleton(new DataSourceConnectionPool(dataSource))

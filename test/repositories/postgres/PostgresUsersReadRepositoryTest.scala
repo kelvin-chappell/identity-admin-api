@@ -6,18 +6,19 @@ import models.database.mongo.{IdentityUser, PrivateFields, SearchFields, UserDat
 import models.database.postgres.PostgresUsersReadRepository
 import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.{DoNotDiscover, Matchers, WordSpecLike}
 import play.api.libs.json.Json
 import scalikejdbc._
-import support.EmbeddedPostgresSupport
+import support.PgTestUtils
 
 import scala.concurrent.ExecutionContext
 import scalaz.\/-
 import scalaz.syntax.std.option._
 
+@DoNotDiscover
 class PostgresUsersReadRepositoryTest extends WordSpecLike
   with Matchers
-  with EmbeddedPostgresSupport
+  with PgTestUtils
   with ScalaFutures {
 
   trait TestFixture {
