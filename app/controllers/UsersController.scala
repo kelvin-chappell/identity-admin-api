@@ -7,6 +7,8 @@ import actions.{AuthenticatedAction, IdentityUserAction, OrphanUserAction}
 import com.gu.identity.util.Logging
 import com.gu.tip.Tip
 import configuration.Config
+import play.api.data.Forms._
+import play.api.data.Form
 import play.api.libs.json._
 import play.api.mvc._
 import services._
@@ -152,11 +154,14 @@ import models.client.ApiError._
     )
   }
 
-  def validateEmail(id: String) = (auth andThen identityUserAction(id)).async { request =>
+  def validateEmail(id: String) = (auth andThen identityUserAction(id)).async { implicit request =>
     logger.info(s"Validating email for user with id: $id")
-    EitherT(userService.validateEmail(request.user.idapiUser)).fold(
-      error => InternalServerError(error),
-      _ => NoContent
+    Form[Boolean](single("validated" -> boolean)).bindFromRequest.fold(
+      formWithErrors => Future(BadRequest(ApiError(s"Failed to validate email for user $id", formWithErrors.errors.toString))),
+      validated => EitherT(userService.validateEmail(request.user.idapiUser, validated)).fold(
+        error => InternalServerError(error),
+        _ => NoContent
+      )
     )
   }
 }
