@@ -32,7 +32,6 @@ import scalaz.{-\/, EitherT, \/-}
     exactTargetService: ExactTargetService,
     discussionService: DiscussionService,
     postgresDeletedUserRepository: PostgresDeletedUserRepository,
-    postgresUsersReadRepository: PostgresUsersReadRepository,
     postgresReservedUsernameRepository: PostgresReservedUsernameRepository)
     (implicit ec: ExecutionContext) extends Logging {
 
@@ -143,13 +142,7 @@ import scalaz.{-\/, EitherT, \/-}
     val usersByMemNumF = EitherT(searchIdentityByMembership(query))
     val orphansF = EitherT(searchOrphan(query))
     val usersBySubIdF = EitherT(searchIdentityBySubscriptionId(query))
-    val activeUsersF = EitherT(
-      Experiment.async(
-        "usersSearch",
-        usersReadRepository.search(query, limit, offset),
-        postgresUsersReadRepository.search(query, limit, offset)
-      ).run
-    )
+    val activeUsersF = EitherT(usersReadRepository.search(query, limit, offset))
     val deletedUsersF = EitherT(postgresDeletedUserRepository.search(query))
 
     (for {

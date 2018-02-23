@@ -37,7 +37,7 @@ class PostgresUsersReadRepository @Inject()(implicit ec: ExecutionContext) exten
       SearchResponse.create(count, _offset, results.map(_._1))
     }(logFailure("Failed to search users table"))
   }
-
+  
   def find(query: String): ApiResponse[Option[User]] = {
     val lowcaseQuery = query.toLowerCase
     val sql =
