@@ -20,8 +20,8 @@ import scala.util.{Failure, Success, Try}
 @Singleton class ExactTargetService @Inject() (
     usersReadRepository: UsersReadRepository)(implicit ec: ExecutionContext) extends Logging {
 
-  private val dateTimeFormatterUSA = DateTimeFormat.forPattern("MM/dd/yyyy hh:mm:ss a")
-  private val dateTimeFormatterGBR = DateTimeFormat.forPattern("dd/MM/yyyy hh:mm:ss a")
+  private val dateTimeFormatterUSA = DateTimeFormat.forPattern("MM/dd/yyyy h:mm:ss a")
+  private val dateTimeFormatterGBR = DateTimeFormat.forPattern("dd/MM/yyyy h:mm:ss a")
 
   /**
     * Unsubscribe this subscriber from all current and future subscriber lists.
