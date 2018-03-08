@@ -8,6 +8,8 @@ import configuration.Config
 import models._
 import models.client._
 import models.database.mongo.UsersReadRepository
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
 
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.std.scalaFuture._
@@ -17,6 +19,10 @@ import scala.util.{Failure, Success, Try}
 
 @Singleton class ExactTargetService @Inject() (
     usersReadRepository: UsersReadRepository)(implicit ec: ExecutionContext) extends Logging {
+
+  private val dateTimeFormatterUSA = DateTimeFormat.forPattern("MM/dd/yyyy HH:mm:ss")
+  private val dateTimeFormatterGBR = DateTimeFormat.forPattern("dd/MM/yyyy HH:mm:ss")
+
   /**
     * Unsubscribe this subscriber from all current and future subscriber lists.
     */
@@ -214,8 +220,16 @@ import scala.util.{Failure, Success, Try}
     recordsFromDeT.map {
       case Some(rows) =>
         rows.map { row =>
+          val createdStr = row.getColumn("created")
+          val createdDate = Try {
+            DateTime.parse(createdStr, dateTimeFormatterUSA).toString(dateTimeFormatterGBR)
+          } orElse {
+            Try(DateTime.parse(createdStr, dateTimeFormatterGBR).toString(dateTimeFormatterGBR))
+          } getOrElse {
+            createdStr
+          }
           Contribution(
-            row.getColumn("created"),
+            createdDate,
             row.getColumn("currency"),
             row.getColumn("amount")
           )
