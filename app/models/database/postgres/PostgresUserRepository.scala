@@ -35,6 +35,7 @@ class PostgresUserRepository @Inject() extends Logging
        |OR jdoc #>> '{searchFields,displayName}' = ${lowcaseQuery}
        |OR jdoc #>> '{privateFields,registrationIp}' = ${lowcaseQuery}
        |OR jdoc #>> '{privateFields,lastActiveIpAddress}' = ${lowcaseQuery}
+       |order by jdoc#>'{primaryEmailAddress}'
        |LIMIT ${_limit}
        |OFFSET ${_offset}
        """.stripMargin

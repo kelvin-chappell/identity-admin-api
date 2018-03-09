@@ -17,7 +17,7 @@ class PostgresReservedUsernameRepository @Inject()(implicit ec: ExecutionContext
   with PostgresUtils {
 
   def loadReservedUsernames: ApiResponse[ReservedUsernameList] = readOnly { implicit session =>
-    val sql = sql"SELECT jdoc from reservedusernames"
+    val sql = sql"SELECT jdoc from reservedusernames order by id"
     val results = sql.map(rs => parse(rs.string(1)).as[ReservedUsername]).list().apply()
     client.ReservedUsernameList(results.map(_.username))
   }(logFailure("Failed to load reserved usernames"))

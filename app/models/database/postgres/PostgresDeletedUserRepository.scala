@@ -25,6 +25,7 @@ import scalaz.\/-
            | WHERE jdoc@>$idMatcher::jsonb
            | OR jdoc@>$emailMatcher::jsonb
            | OR jdoc@>$usernameMatcher::jsonb
+           | order by jdoc->>'username'
        """.stripMargin
     sqlQuery.map(_.string(1)).single.apply.map(
       Json.parse(_).as[DeletedUser]
