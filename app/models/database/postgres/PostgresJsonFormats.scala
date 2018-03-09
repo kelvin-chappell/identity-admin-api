@@ -33,7 +33,7 @@ trait PostgresJsonFormats {
   implicit lazy val groupMemberShipFormat = Json.format[GroupMembership]
 
 
-  private lazy val identityUserReads: Reads[IdentityUser] = (
+  implicit lazy val identityUserReads: Reads[IdentityUser] = (
     (JsPath \ "primaryEmailAddress").read[String] and
       (JsPath \ "_id").read[String].orElse((JsPath \ "id").read[String]) and
       (JsPath \ "publicFields").readNullable[PublicFields] and
@@ -47,7 +47,7 @@ trait PostgresJsonFormats {
       (JsPath \ "adData").readNullable[Map[String, Any]].map(_.getOrElse(Map.empty)) and
       (JsPath \ "searchFields").readNullable[SearchFields])(IdentityUser.apply _)
 
-  private lazy val identityUserWrites: OWrites[IdentityUser] = (
+  implicit lazy val identityUserWrites: OWrites[IdentityUser] = (
     (JsPath \ "primaryEmailAddress").write[String] and
       (JsPath \ "id").write[String] and
       (JsPath \ "publicFields").writeNullable[PublicFields] and
