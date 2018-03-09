@@ -8,5 +8,5 @@ import support.EmbeddedPostgresSupport
 class EmbeddedPostgresSuites extends Suites(
   new PostgresDeletedUserRepositoryTest,
   new PostgresReservedUsernameRepositoryTest,
-  new PostgresUsersReadRepositoryTest
+  new PostgresUserRepositoryTest
 ) with EmbeddedPostgresSupport

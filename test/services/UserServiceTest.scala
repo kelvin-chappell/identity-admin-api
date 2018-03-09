@@ -3,7 +3,7 @@ package services
 import actors.EventPublishingActorProvider
 import models.client._
 import models.database.mongo.{DeletedUsersRepository, ReservedUserNameWriteRepository, UsersReadRepository, UsersWriteRepository}
-import models.database.postgres.{PostgresDeletedUserRepository, PostgresReservedUsernameRepository, PostgresUsersReadRepository}
+import models.database.postgres.{PostgresDeletedUserRepository, PostgresReservedUsernameRepository, PostgresUserRepository}
 import util.UserConverter._
 import org.mockito.Mockito
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpec}
@@ -32,13 +32,13 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
   val exactTargetService = mock[ExactTargetService]
   val discussionService = mock[DiscussionService]
   val pgDeletedUserRepo = mock[PostgresDeletedUserRepository]
-  val pgUserReadRepo = mock[PostgresUsersReadRepository]
+  val pgUserReadRepo = mock[PostgresUserRepository]
   val pgReservedUsernameRepo = mock[PostgresReservedUsernameRepository]
 
   val service =
     spy(new UserService(userReadRepo, userWriteRepo, identityApiClient,
       eventPublishingActorProvider, salesforceService, salesforceIntegration, madgexService, exactTargetService,
-      discussionService, pgDeletedUserRepo, pgReservedUsernameRepo))
+      discussionService, pgDeletedUserRepo, pgReservedUsernameRepo, pgUserReadRepo))
 
   before {
     Mockito.reset(userReadRepo, userWriteRepo, identityApiClient, eventPublishingActorProvider, service, madgexService)

@@ -87,7 +87,7 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
       val offset = Some(-1)
       val result = controller.search(query, limit, offset)(FakeRequest())
       status(result) shouldEqual BAD_REQUEST
-      contentAsJson(result) shouldEqual Json.toJson(ApiError("offset must be a positive integer"))
+      contentAsJson(result) shouldEqual Json.toJson(ApiError("offset must be a positive integer less than 500"))
     }
 
     "return 400 when limit is negative" in {

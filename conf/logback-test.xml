@@ -1,0 +1,16 @@
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%date [%thread] %-5level %logger{36} - %msg%n%xException{full}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- this is a workaround to prevent:
+     "WARN  org.apache.commons.httpclient.HttpMethodBase - Going to buffer response body of large or unknown size. Using getResponseBodyAsStream instead is recommended."
+     review whether this is needed when we upgrade to httpclient 4.0 -->
+    <logger name="org.apache.commons.httpclient.HttpMethodBase" level="ERROR"/>
+
+    <root level="error">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>

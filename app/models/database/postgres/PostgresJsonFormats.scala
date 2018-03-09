@@ -35,7 +35,7 @@ trait PostgresJsonFormats {
 
   private lazy val identityUserReads: Reads[IdentityUser] = (
     (JsPath \ "primaryEmailAddress").read[String] and
-      (JsPath \ "_id").read[String] and
+      (JsPath \ "_id").read[String].orElse((JsPath \ "id").read[String]) and
       (JsPath \ "publicFields").readNullable[PublicFields] and
       (JsPath \ "privateFields").readNullable[PrivateFields] and
       (JsPath \ "statusFields").readNullable[StatusFields] and
@@ -49,7 +49,7 @@ trait PostgresJsonFormats {
 
   private lazy val identityUserWrites: OWrites[IdentityUser] = (
     (JsPath \ "primaryEmailAddress").write[String] and
-      (JsPath \ "_id").write[String] and
+      (JsPath \ "id").write[String] and
       (JsPath \ "publicFields").writeNullable[PublicFields] and
       (JsPath \ "privateFields").writeNullable[PrivateFields] and
       (JsPath \ "statusFields").writeNullable[StatusFields] and

@@ -1,9 +1,9 @@
 package repositories.postgres
 
 import com.google.common.util.concurrent.MoreExecutors
-import models.client.{ApiResponse, SearchResponse}
-import models.database.mongo.{IdentityUser, PrivateFields, SearchFields, UserDates}
-import models.database.postgres.PostgresUsersReadRepository
+import models.client.{ApiResponse, SearchResponse, User, UserUpdateRequest}
+import models.database.mongo._
+import models.database.postgres.PostgresUserRepository
 import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{DoNotDiscover, Matchers, WordSpecLike}
@@ -16,16 +16,16 @@ import scalaz.\/-
 import scalaz.syntax.std.option._
 
 @DoNotDiscover
-class PostgresUsersReadRepositoryTest extends WordSpecLike
+class PostgresUserRepositoryTest extends WordSpecLike
   with Matchers
   with PgTestUtils
   with ScalaFutures {
 
   trait TestFixture {
-    private val executor = ExecutionContext.fromExecutor(MoreExecutors.directExecutor())
-    val repo = new PostgresUsersReadRepository()(executor)
+    val repo = new PostgresUserRepository()
+    implicit val ec = repo.ec
     val testUser = IdentityUser(
-      "identitydev@guardian.co.uk", "1000001",
+      "identitydev@guardian.co.uk", "1234",
       searchFields = SearchFields(
         "identitydev@guardian.co.uk".some, "username".some, "displayname".some, "n19ag".some, "n1".some
       ).some, publicFields = None,
@@ -34,14 +34,15 @@ class PostgresUsersReadRepositoryTest extends WordSpecLike
       ).some,
       dates = UserDates(
         lastActivityDate = new DateTime(42000l, DateTimeZone.UTC).some
-      ).some
+      ).some,
+      statusFields = StatusFields(receive3rdPartyMarketing = true.some, userEmailValidated = false.some).some
     )
     val userJson = Json.stringify(Json.toJson(testUser))
     execSql(
       sql"""
-         | INSERT INTO users (id, jdoc) values
-         | ('1234', ${userJson}::jsonb)
-         | ON CONFLICT (id) DO UPDATE set jdoc=excluded.jdoc
+           | INSERT INTO users (id, jdoc) values
+           | ('1234', ${userJson}::jsonb)
+           | ON CONFLICT (id) DO UPDATE set jdoc=excluded.jdoc
       """.stripMargin)
   }
 
@@ -82,10 +83,11 @@ class PostgresUsersReadRepositoryTest extends WordSpecLike
 
     "find multiple users if they match" in new TestFixture {
       val secondUser = Json.stringify(Json.toJson(testUser.copy(primaryEmailAddress = "foo@bar.com", _id = "10000123")))
-      execSql(sql"""
-               | INSERT INTO users (id, jdoc) values
-               | ('12345', ${secondUser}::jsonb)
-               | ON CONFLICT (id) DO UPDATE set jdoc=excluded.jdoc
+      execSql(
+        sql"""
+             | INSERT INTO users (id, jdoc) values
+             | ('12345', ${secondUser}::jsonb)
+             | ON CONFLICT (id) DO UPDATE set jdoc=excluded.jdoc
              """.stripMargin)
       whenReady(repo.search("username")) { result =>
         val \/-(searchResponse) = result
@@ -95,17 +97,57 @@ class PostgresUsersReadRepositoryTest extends WordSpecLike
   }
 
   "UserReadRepository#find" should {
-    "Find a single user" in new TestFixture {
-      whenReady(repo.find("identitydev@guardian.co.uk")) {
+    "Find a single by id" in new TestFixture {
+      whenReady(repo.findById("1234")) {
         case \/-(maybeUser) => maybeUser should not be empty
         case _ => fail("expected to find a user")
       }
     }
     "Read ISO-8601 formatted date time strings to DateTime objects" in new TestFixture {
-      whenReady(repo.find("identitydev@guardian.co.uk")) {
+      whenReady(repo.findById("1234")) {
         case \/-(Some(user)) =>
           user.lastActivityDate shouldBe new DateTime(42000l, DateTimeZone.UTC).some
         case _ => fail("expected to find a user")
+      }
+    }
+  }
+
+  "PostgresUserRepository#update" should {
+    "Apply the updates to the user" in new TestFixture {
+      val displayNameUpdate = Some("eric_b_for_president")
+      whenReady(
+        repo.update(User(testUser), UserUpdateRequest("", displayName = displayNameUpdate))
+          .flatMap(_ => repo.findById("1234"))
+      ) { case \/-(Some(updatedUser)) =>
+        updatedUser.displayName shouldBe displayNameUpdate
+      }
+    }
+  }
+
+  "PostgresUserRepository#unsubscribeFromMarketingEmails" should {
+    "Unsub from marketing mails" in new TestFixture {
+      whenReady(
+        repo.unsubscribeFromMarketingEmails("identitydev@guardian.co.uk")
+          .flatMap(_ => repo.findById("1234"))
+      ) { case \/-(Some(updatedUser)) =>
+        updatedUser.status.receive3rdPartyMarketing shouldBe Some(false)
+      }
+    }
+  }
+
+  "PostgresUserRepository#updateEmailValidationStatus" should {
+    "Unsub from marketing mails" in new TestFixture {
+      whenReady(
+        repo.updateEmailValidationStatus(User(testUser), true)
+          .flatMap(_ => repo.findById("1234"))
+      ) { case \/-(Some(updatedUser)) =>
+        updatedUser.status.userEmailValidated shouldBe Some(true)
+      }
+      whenReady(
+        repo.updateEmailValidationStatus(User(testUser), false)
+          .flatMap(_ => repo.findById("1234"))
+      ) { case \/-(Some(updatedUser)) =>
+        updatedUser.status.userEmailValidated shouldBe Some(false)
       }
     }
   }
