@@ -40,6 +40,10 @@
         <appender-ref ref="ACCESSLOGFILE"/>
     </logger>
 
+    <logger name="scientist" level="INFO">
+        <appender-ref ref="LOGFILE"/>
+    </logger>
+
     <root level="INFO">
         <appender-ref ref="LOGFILE"/>
     </root>
