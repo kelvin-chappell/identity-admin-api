@@ -107,7 +107,10 @@ object Experiment extends LazyLogging with ErrorLogging {
                          skipPredicate: SkipPredicate[A]): Future[Unit] = {
 
     after(candidateDelay, actorSystem.scheduler) {
-      diffExperiment(name, control, candidate, retries, retryControl)
+//      diffExperiment(name, control, candidate, retries, retryControl)
+      control
+      candidate
+      Future.successful(())
     }
   }
 }
