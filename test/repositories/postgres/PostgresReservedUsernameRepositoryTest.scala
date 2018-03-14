@@ -46,11 +46,13 @@ class PostgresReservedUsernameRepositoryTest extends WordSpecLike
     }
 
     "add a reserved username" in new TestFixture {
-      whenReady(repo.loadReservedUsernames) { case  \/-(list) =>
-        list.reservedUsernames.size shouldBe 25
+      whenReady(repo.loadReservedUsernames) {
+        case  \/-(list) => list.reservedUsernames.size shouldBe 25
+        case _ => fail()
       }
-      whenReady(repo.addReservedUsername("ToastyMcToastface")) { case  \/-(list) =>
-        list.reservedUsernames.size shouldBe 26
+      whenReady(repo.addReservedUsername("ToastyMcToastface")) {
+        case  \/-(list) => list.reservedUsernames.size shouldBe 26
+        case _ => fail()
       }
     }
   }

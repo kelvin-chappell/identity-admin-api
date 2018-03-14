@@ -12,7 +12,6 @@ class PostgresModule extends Module {
   override def bindings(environment: Environment, configuration: Configuration) = {
     val dataSource: DataSource = {
       val config = new HikariConfig()
-      config.setConnectionTestQuery("SELECT 1")
       config.setJdbcUrl(Postgres.jdbcUrl)
       config.setUsername(Postgres.username)
       config.setPassword(Postgres.password)

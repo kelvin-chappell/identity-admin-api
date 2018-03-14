@@ -1,15 +1,18 @@
 package models.database.postgres
 
+import com.fasterxml.jackson.databind.util.ISO8601DateFormat
 import models.database._
 import models.database.mongo._
-import org.joda.time.DateTime
-import org.joda.time.format.{DateTimeFormatter, ISODateTimeFormat}
+import org.joda.time.{DateTime, DateTimeZone}
+import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.util.Try
 
 trait PostgresJsonFormats {
+  private val dateTimeFormatter = new ISO8601DateFormat()
+  private def parseDateTimeString(s: String): Option[DateTime] = Try(new DateTime(dateTimeFormatter.parse(s)).withZone(DateTimeZone.UTC)).toOption
 
   implicit lazy val objectMapFormat = MongoJsonFormats.objectMapFormat
 
@@ -18,8 +21,7 @@ trait PostgresJsonFormats {
   implicit lazy val dateTimeRead: Reads[DateTime] = new Reads[DateTime] {
     override def reads(json: JsValue): JsResult[DateTime] = json match {
       case JsString(v) =>
-        Try(isoFormatter.parseDateTime(v)).toOption
-          .fold[JsResult[DateTime]](JsError(s"Expected ISO-8601 string, got $v"))(d => JsSuccess(d))
+        parseDateTimeString(v).fold[JsResult[DateTime]](JsError(s"Expected ISO-8601 string, got $v"))(d => JsSuccess(d))
       case other => JsError(s"Expected an ISO-8601 DateTime string, got $other")
     }
   }
@@ -30,6 +32,7 @@ trait PostgresJsonFormats {
   }
 
   implicit lazy val userDatesFormat = Json.format[UserDates]
+  implicit lazy val consentsFormat = Json.format[Consent]
   implicit lazy val groupMemberShipFormat = Json.format[GroupMembership]
 
 

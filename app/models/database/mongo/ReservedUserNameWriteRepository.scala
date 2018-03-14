@@ -15,17 +15,12 @@ import scala.concurrent.ExecutionContext
 import scalaz.std.scalaFuture._
 import scalaz.{-\/, OptionT, \/-}
 
+// TODO implement for postgres
 @Singleton class ReservedUserNameWriteRepository @Inject() (
     environment: play.api.Environment,
     reactiveMongoApi: ReactiveMongoApi)(implicit ec: ExecutionContext) extends Logging {
 
   private lazy val reservedUsernamesF = reactiveMongoApi.database.map(_.collection("reservedUsernames"))
-
-  def findReservedUsername(query: String): ApiResponse[ReservedUsername] =
-    OptionT(reservedUsernamesF.flatMap(_.find(buildSearchQuery(query)).one[ReservedUsername])).fold(
-      username => \/-(username),
-      -\/(ApiError("Username not found"))
-    )
 
   private def buildSearchQuery(query: String) =
     Json.obj(

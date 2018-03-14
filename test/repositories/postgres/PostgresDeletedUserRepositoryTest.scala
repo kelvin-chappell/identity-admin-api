@@ -61,11 +61,13 @@ class PostgresDeletedUserRepositoryTest extends WordSpecLike
   }
   "DeletedUserRepository#remove" should {
     "Delete the reserved email for the passed in id" in new TestFixture {
-      whenReady(repo.remove("1234")) { case \/-(result) =>
-        result shouldBe 1
+      whenReady(repo.remove("1234")) {
+        case \/-(result) => result shouldBe 1
+        case _ => fail()
       }
-      whenReady(repo.search("1234")) { case \/-(result) =>
-        result.total shouldBe 0
+      whenReady(repo.search("1234")) {
+        case \/-(result) => result.total shouldBe 0
+        case _ => fail()
       }
     }
   }

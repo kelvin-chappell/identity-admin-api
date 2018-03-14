@@ -13,9 +13,8 @@ import scala.concurrent.ExecutionContext
 import scalaz.std.scalaFuture._
 import scalaz.{-\/, EitherT, OptionT, \/-}
 
-@Singleton class UsersWriteRepository @Inject() (
-    reactiveMongoApi: ReactiveMongoApi,
-    deletedUsersRepository: DeletedUsersRepository)(implicit ec: ExecutionContext) extends Logging {
+@Singleton class UsersWriteRepository @Inject() (reactiveMongoApi: ReactiveMongoApi)
+                                                (implicit ec: ExecutionContext) extends Logging {
 
   private lazy val usersF = reactiveMongoApi.database.map(_.collection("users"))
 
