@@ -118,8 +118,9 @@ class PostgresUserRepositoryTest extends WordSpecLike
       whenReady(
         repo.update(User(testUser), UserUpdateRequest("", displayName = displayNameUpdate))
           .flatMap(_ => repo.findById("1234"))
-      ) { case \/-(Some(updatedUser)) =>
-        updatedUser.displayName shouldBe displayNameUpdate
+      ) {
+        case \/-(Some(updatedUser)) => updatedUser.displayName shouldBe displayNameUpdate
+        case _ => fail()
       }
     }
   }
@@ -129,8 +130,9 @@ class PostgresUserRepositoryTest extends WordSpecLike
       whenReady(
         repo.unsubscribeFromMarketingEmails("identitydev@guardian.co.uk")
           .flatMap(_ => repo.findById("1234"))
-      ) { case \/-(Some(updatedUser)) =>
-        updatedUser.status.receive3rdPartyMarketing shouldBe Some(false)
+      ) {
+        case \/-(Some(updatedUser)) => updatedUser.status.receive3rdPartyMarketing shouldBe Some(false)
+        case _ => fail()
       }
     }
   }
@@ -140,14 +142,16 @@ class PostgresUserRepositoryTest extends WordSpecLike
       whenReady(
         repo.updateEmailValidationStatus(User(testUser), true)
           .flatMap(_ => repo.findById("1234"))
-      ) { case \/-(Some(updatedUser)) =>
-        updatedUser.status.userEmailValidated shouldBe Some(true)
+      ) {
+        case \/-(Some(updatedUser)) => updatedUser.status.userEmailValidated shouldBe Some(true)
+        case _ => fail()
       }
       whenReady(
         repo.updateEmailValidationStatus(User(testUser), false)
           .flatMap(_ => repo.findById("1234"))
-      ) { case \/-(Some(updatedUser)) =>
-        updatedUser.status.userEmailValidated shouldBe Some(false)
+      ) {
+        case \/-(Some(updatedUser)) => updatedUser.status.userEmailValidated shouldBe Some(false)
+        case _ => fail()
       }
     }
   }

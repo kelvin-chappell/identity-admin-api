@@ -1,12 +1,13 @@
 package services
 
 import actors.EventPublishingActorProvider
+import akka.actor.ActorSystem
 import models.client._
-import models.database.mongo.{DeletedUsersRepository, ReservedUserNameWriteRepository, UsersReadRepository, UsersWriteRepository}
+import models.database.mongo.{ReservedUserNameWriteRepository, UsersReadRepository, UsersWriteRepository}
 import models.database.postgres.{PostgresDeletedUserRepository, PostgresReservedUsernameRepository, PostgresUserRepository}
 import util.UserConverter._
 import org.mockito.Mockito
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpec}
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, WordSpec}
 import org.scalatest.mockito.MockitoSugar
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -16,7 +17,7 @@ import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import scala.concurrent.duration._
 import scalaz.{-\/, \/-}
 
-class UserServiceTest extends WordSpec with MockitoSugar with Matchers with BeforeAndAfter with GuiceOneServerPerSuite {
+class UserServiceTest extends WordSpec with MockitoSugar with Matchers with BeforeAndAfter with GuiceOneServerPerSuite with BeforeAndAfterAll {
 
   implicit val ec = app.injector.instanceOf[ExecutionContext]
 
@@ -34,6 +35,11 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
   val pgDeletedUserRepo = mock[PostgresDeletedUserRepository]
   val pgUserReadRepo = mock[PostgresUserRepository]
   val pgReservedUsernameRepo = mock[PostgresReservedUsernameRepository]
+  implicit val actorSystem = ActorSystem()
+
+  override def afterAll: Unit = {
+    actorSystem.terminate()
+  }
 
   val service =
     spy(new UserService(userReadRepo, userWriteRepo, identityApiClient,

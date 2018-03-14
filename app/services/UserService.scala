@@ -6,6 +6,7 @@ import actors.EventPublishingActor.{DisplayNameChanged, EmailValidationChanged}
 import actors.EventPublishingActorProvider
 import ai.x.diff._
 import ai.x.diff.conversions._
+import akka.actor.ActorSystem
 import com.gu.identity.util.Logging
 import configuration.Config.PublishEvents.eventsEnabled
 import models.{client, _}
@@ -15,11 +16,12 @@ import models.database.postgres.{PostgresDeletedUserRepository, PostgresReserved
 import org.joda.time.DateTime
 import uk.gov.hmrc.emailaddress.EmailAddress
 import util.UserConverter._
-import util.scientist.{Defaults, Experiment, ExperimentSettings}
+import util.scientist.Experiment
+import util.scientist.implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.std.scalaFuture._
-import scalaz.{-\/, EitherT, \/-}
+import scalaz.{-\/, EitherT, \/, \/-}
 
 @Singleton class UserService @Inject()(
     usersReadRepository: UsersReadRepository,
@@ -34,16 +36,13 @@ import scalaz.{-\/, EitherT, \/-}
     postgresDeletedUserRepository: PostgresDeletedUserRepository,
     postgresReservedUsernameRepository: PostgresReservedUsernameRepository,
     postgresUsersReadRepository: PostgresUserRepository)
-    (implicit ec: ExecutionContext) extends Logging {
+    (implicit ec: ExecutionContext, actorSystem: ActorSystem) extends Logging {
 
   implicit val dateTimeDiffShow: DiffShow[DateTime] = new DiffShow[DateTime] {
     def show ( d: DateTime ) = "DateTime(" + d.toString + ")"
     def diff( l: DateTime, r: DateTime ) =
       if ( l isEqual r ) Identical( l ) else Different( l, r )
   }
-
-  private implicit val futureMonad =
-    cats.instances.future.catsStdInstancesForFuture(ec)
 
   def update(existingUser: User, userUpdateRequest: UserUpdateRequest): ApiResponse[User] = {
     val emailValid = isEmailValid(existingUser, userUpdateRequest)
@@ -57,7 +56,11 @@ import scalaz.{-\/, EitherT, \/-}
         val usernameChanged = isUsernameChanged(userUpdateRequest.username, existingUser.username)
         val displayNameChanged = isDisplayNameChanged(userUpdateRequest.displayName, existingUser.displayName)
         val mongoWrite = usersWriteRepository.update(existingUser, userUpdateRequest)
-        Experiment.async("UpdateUser", mongoWrite, postgresUsersReadRepository.update(existingUser, userUpdateRequest)).run
+        Experiment.delayedBlocking[ApiError \/ User](
+          "UpdateUser",
+          mongoWrite,
+          postgresUsersReadRepository.update(existingUser, userUpdateRequest)
+        )
         EitherT(mongoWrite).map { result =>
           triggerEvents(
             userId = existingUser.id,
@@ -145,7 +148,11 @@ import scalaz.{-\/, EitherT, \/-}
     val orphansF = EitherT(searchOrphan(query))
     val usersBySubIdF = EitherT(searchIdentityBySubscriptionId(query))
     val mongoSearchResult = usersReadRepository.search(query, limit, offset)
-    Experiment.async("SearchUser", mongoSearchResult, postgresUsersReadRepository.search(query, limit, offset)).run
+    Experiment.delayedBlocking[ApiError \/ SearchResponse](
+      "SearchUser",
+      mongoSearchResult,
+      postgresUsersReadRepository.search(query, limit, offset)
+    )
     val activeUsersF = EitherT(mongoSearchResult)
     val deletedUsersF = EitherT(postgresDeletedUserRepository.search(query))
 
@@ -245,7 +252,11 @@ import scalaz.{-\/, EitherT, \/-}
 
     val deletedUserOptF = EitherT(postgresDeletedUserRepository.findBy(id))
     val mongoResult = usersReadRepository.find(id)
-    Experiment.async("FindUser", mongoResult, postgresUsersReadRepository.findById(id)).run
+    Experiment.delayedBlocking[ApiError \/ Option[User]](
+      "FindUser",
+      mongoResult,
+      postgresUsersReadRepository.findById(id)
+    )
     val activeUserOptF = EitherT(mongoResult)
 
     (for {
@@ -262,7 +273,11 @@ import scalaz.{-\/, EitherT, \/-}
   def delete(user: GuardianUser): ApiResponse[ReservedUsernameList] = {
     val reserveUsernameResult = user.idapiUser.username.fold(postgresReservedUsernameRepository.loadReservedUsernames)(postgresReservedUsernameRepository.addReservedUsername)
     val mongoResult = usersWriteRepository.delete(user.idapiUser)
-    Experiment.async("DeleteUser", mongoResult, postgresUsersReadRepository.delete(user.idapiUser).map(_.map(_ => {}))).run
+    Experiment.delayedBlocking[ApiError \/ Unit](
+      "DeleteUser",
+      mongoResult,
+      postgresUsersReadRepository.delete(user.idapiUser).map(_.map(_ => ()))
+    )
     (for {
       _ <- EitherT(mongoResult)
       reservedUsernameList <- EitherT(reserveUsernameResult)
@@ -271,8 +286,11 @@ import scalaz.{-\/, EitherT, \/-}
 
   def validateEmail(user: User, emailValidated: Boolean = true): ApiResponse[Unit] = {
     val mongoResult = usersWriteRepository.updateEmailValidationStatus(user, emailValidated)
-    Experiment.async("ValidateEmail", mongoResult.map(_ => 1),
-      postgresUsersReadRepository.updateEmailValidationStatus(user, emailValidated)).run
+    Experiment.delayedBlocking[ApiError \/ User](
+      "ValidateEmail",
+      mongoResult,
+      postgresUsersReadRepository.updateEmailValidationStatus(user, emailValidated)
+    )
     EitherT(mongoResult).map { _ =>
       triggerEvents(userId = user.id, usernameChanged = false, displayNameChanged = false, emailValidatedChanged = true)
     }.run
@@ -284,9 +302,13 @@ import scalaz.{-\/, EitherT, \/-}
       _ <- EitherT(identityApiClient.sendEmailValidation(user.id))
     } yield()).run
 
-  def unsubscribeFromMarketingEmails(email: String): ApiResponse[User] = {
-    val mongoResult = usersWriteRepository.unsubscribeFromMarketingEmails(email)
-    Experiment.async("UnsubscribeFromMarketing", mongoResult, postgresUsersReadRepository.unsubscribeFromMarketingEmails(email)).run
+  def unsubscribeFromMarketingEmails(email: String): ApiResponse[Int] = {
+    val mongoResult =  usersWriteRepository.unsubscribeFromMarketingEmails(email).map(_.map(_ => 1))
+    Experiment.delayedBlocking[ApiError \/ Int](
+      "UnsubscribeFromMarketing",
+      mongoResult,
+      postgresUsersReadRepository.unsubscribeFromMarketingEmails(email)
+    )
     mongoResult
   }
 

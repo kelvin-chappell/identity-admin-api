@@ -2,14 +2,18 @@ package services
 
 import javax.inject.{Inject, Singleton}
 
+import akka.actor.ActorSystem
 import com.exacttarget.fuelsdk._
 import com.gu.identity.util.Logging
 import configuration.Config
 import models._
 import models.client._
 import models.database.mongo.UsersReadRepository
+import models.database.postgres.PostgresUserRepository
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
+import util.scientist.Experiment
+import util.scientist.implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.std.scalaFuture._
@@ -17,8 +21,9 @@ import scalaz.{-\/, EitherT, \/, \/-}
 import scala.collection.JavaConversions._
 import scala.util.{Failure, Success, Try}
 
-@Singleton class ExactTargetService @Inject() (
-    usersReadRepository: UsersReadRepository)(implicit ec: ExecutionContext) extends Logging {
+@Singleton class ExactTargetService @Inject()(usersReadRepository: UsersReadRepository,
+                                              postgresUsersReadRepository: PostgresUserRepository)
+                                             (implicit ec: ExecutionContext, actorSystem: ActorSystem) extends Logging {
 
   private val dateTimeFormatterUSA = DateTimeFormat.forPattern("MM/dd/yyyy h:mm:ss a")
   private val dateTimeFormatterGBR = DateTimeFormat.forPattern("dd/MM/yyyy h:mm:ss a")
@@ -58,11 +63,23 @@ import scala.util.{Failure, Success, Try}
       case None => EitherT.right(Future.successful({}))
     }.run
 
-  def newslettersSubscriptionByIdentityId(identityId: String): ApiResponse[Option[NewslettersSubscription]] =
-    EitherT(usersReadRepository.find(identityId)).flatMap {
+  private def dualFind(identityId: String): ApiResponse[Option[User]] = {
+    val mongoResult = usersReadRepository.find(identityId)
+    Experiment.delayedBlocking[ApiError \/ Option[User]](
+      "FindUser",
+      mongoResult,
+      postgresUsersReadRepository.findById(identityId)
+    )
+    mongoResult
+  }
+
+  def newslettersSubscriptionByIdentityId(identityId: String): ApiResponse[Option[NewslettersSubscription]] = {
+
+    EitherT(dualFind(identityId)).flatMap {
       case Some(user) => EitherT(newslettersSubscriptionByEmail(user.email))
       case None => EitherT.right(Future.successful(Option.empty[NewslettersSubscription]))
     }.run
+  }
 
   def newslettersSubscriptionByEmail(email: String): ApiResponse[Option[NewslettersSubscription]] = {
 
@@ -197,13 +214,13 @@ import scala.util.{Failure, Success, Try}
   }
 
   def subscriberByIdentityId(identityId: String): ApiResponse[Option[ExactTargetSubscriber]] =
-    EitherT(usersReadRepository.find(identityId)).flatMap {
+    EitherT(dualFind(identityId)).flatMap {
       case Some(user) => EitherT(subscriberByEmail(user.email))
       case None => EitherT.right(Future.successful(Option.empty[ExactTargetSubscriber]))
     }.run
 
   def contributionsByIdentityId(identityId: String): ApiResponse[List[Contribution]] =
-    EitherT(usersReadRepository.find(identityId)).flatMap {
+    EitherT(dualFind(identityId)).flatMap {
       case Some(user) => EitherT(contributionsByEmail(user.email))
       case None => EitherT.right(Future.successful(List.empty[Contribution]))
     }.run

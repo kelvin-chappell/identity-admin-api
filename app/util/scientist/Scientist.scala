@@ -1,107 +1,144 @@
 package util.scientist
 
-import ai.x.diff._
-import ai.x.diff.conversions._
-import cats.{Id, Monad, MonadError}
-import org.slf4j.LoggerFactory
+import java.util.concurrent.Executors
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.language.higherKinds
-import scala.util.control.NonFatal
-import scalaz._, Scalaz._
+import ai.x.diff._
+import akka.actor.ActorSystem
+import com.typesafe.scalalogging.LazyLogging
+import akka.pattern.after
+import models.client.User
+
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.duration.{FiniteDuration, _}
+import scala.language.postfixOps
+import scala.util.{Failure, Random, Success, Try}
+import scalaz.{-\/, \/, \/-}
+
+trait ErrorLogging extends LazyLogging {
+  def errorLogging[A](info: String, context: String = "")(block: => A): A = Try(block) match {
+    case Success(result) =>
+      result
+    case Failure(e) =>
+      logger.error(s"$info \n \n $context", e)
+      throw e
+  }
+}
 
 sealed trait Result extends Product with Serializable
-case class ExperimentFailure(e: String) extends Result
-case class Match[A](control: A, candidate: A) extends Result
-case class DisabledExperiment(name: String) extends Result
-case class MisMatch[A](control: A, candidate: A) extends Result
+case class ExperimentFailure(name: String, e: Throwable) extends Result
+case class Match[A](control: A, candidate: A, name: String) extends Result
+case class MisMatch[A](control: A, candidate: A, name: String, diff: String) extends Result
+case object SkipResult extends Result
 
-object Defaults {
-  lazy val log = LoggerFactory.getLogger("scientist")
-  def loggingReporter[A: Manifest : DiffShow]: Experiment.Reporter[A] = (a: A) => {
-    case ExperimentFailure(e) =>
-      log.error(s"Scientist error encountered processing for contol: $a", e)
-    case MisMatch(control: A, candidate: A) =>
-      log.error(DiffShow.diff(control, candidate).string)
-    case Match(_, _) =>
-      log.info(s"Successful comparison for ${implicitly[Manifest[A]].runtimeClass.getSimpleName}")
-    case _ =>
-  }
-}
-
-case class ExperimentSettings[A](reporter: Experiment.Reporter[A]) {
-  def isEnabled(experimentName: String): Boolean = true
-}
-
-object ExperimentSettings {
-  implicit def experimentSettings[T: Manifest](implicit d: DiffShow[T]): ExperimentSettings[T] =
-    ExperimentSettings(Defaults.loggingReporter[T])
-}
-
-object Experiment {
-  type Reporter[A] = A => Result => Unit
-
-  implicit def errorMonadForId(implicit idMonad: Monad[Id]): MonadError[Id, Throwable] = new MonadError[Id, Throwable] {
-    override def flatMap[A, B](fa: Id[A])(f: A => Id[B]) = idMonad.flatMap(fa)(f)
-    override def tailRecM[A, B](a: A)(f: A => Id[Either[A, B]]) = idMonad.tailRecM(a)(f)
-    override def raiseError[A](e: Throwable): Id[A] = throw e
-    override def handleErrorWith[A](fa: Id[A])(f: Throwable => Id[A]) = try {
-      fa
-    } catch {
-      case NonFatal(e) => f(e)
-    }
-    override def pure[A](x: A) = idMonad.pure(x)
-  }
-
-  def async[A: Manifest](name: String, control: => Future[A], candidate: => Future[A])
-              (implicit ec: ExecutionContext, settings: ExperimentSettings[A],
-               m: MonadError[Future, Throwable], diffShow: DiffShow[A]): Experiment[A, Future, Throwable] =
-    apply[A, Future, Throwable](name, control, candidate)
-
-  def sync[A: Manifest](name: String, control: => A, candidate: => A)
-             (implicit settings: ExperimentSettings[A], diffShow: DiffShow[A]): Experiment[A, Id, Throwable] =
-    apply[A, Id, Throwable](name, control, candidate)
-
-  def apply[A: Manifest, M[_], E](name: String, control: => M[A], candidate: => M[A])
-                       (implicit settings: ExperimentSettings[A],
-                        m: MonadError[M, E],
-                        diffShow: DiffShow[A]): Experiment[A, M, E] =
-    new Experiment[A, M, E] {
-      override lazy val _name: String = name
-      override lazy val _control = () => control
-      override lazy val _candidate = () => candidate
-      override lazy val _diffShow = diffShow
-    }
-}
-
-sealed trait Experiment[A, M[_], E] {
-  def _name: String
-  protected def _control: () => M[A]
-  protected def _candidate: () => M[A]
-  protected def _diffShow: DiffShow[A]
-
-  final def run(implicit m: MonadError[M, E], settings: ExperimentSettings[A]): M[A] = {
-    val controlValue = _control()
-    if (settings.isEnabled(_name)) {
-      val experimentResult: M[Result] = try {
-        val candidateValue = _candidate()
-        m.flatMap(controlValue)(cont => {
-          m.handleErrorWith(
-            m.map(candidateValue) { cand =>
-              if (cont.equals(cand))
-                Match(cont, cand)
-              else
-                MisMatch(cont, cand)
-            }
-          )(e => m.pure(ExperimentFailure(e.toString)))
-        })
-      } catch {
-        case NonFatal(e) => m.pure(ExperimentFailure(s"${e.getMessage} \n ${e.getStackTrace.mkString("\n")}"))
-      }
-      m.map2(controlValue, experimentResult){case (control, result) => settings.reporter(control)(result)}
+object Result {
+  def fromDiffResult[A](control: A, candidate: A, name: String, diff: Comparison): Result = {
+    if (diff.isIdentical) {
+      Match(control, candidate, name)
     } else {
-      m.map2(controlValue, m.pure(DisabledExperiment(_name))){case (control, result) => settings.reporter(control)(result)}
+      MisMatch(control, candidate, name, diff.string)
     }
-    controlValue
   }
 }
+
+object Experiment extends LazyLogging with ErrorLogging {
+
+  private implicit val blockingContext: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
+
+  val experimentDelay: FiniteDuration = 0.seconds
+
+  private def logResult[A](result: Result): Unit = result match {
+    case ExperimentFailure(name, e) =>
+      logger.error(s"Experiment $name error encountered", e)
+    case MisMatch(control, candiate, name, diff) =>
+      logger.warn(s"Experiment $name failed \n $control \n is not \n $candiate \n \n $diff")
+    case Match(_, _, name) =>
+      logger.info(s"Experiment $name succeeded")
+    case SkipResult => ()
+  }
+
+  private def diffExperiment[A](name: String,
+                                control: => Future[A],
+                                candidate: => Future[A],
+                                retries: Int,
+                                retryControl: => Option[Future[A]])
+                               (implicit
+                                actorSystem: ActorSystem,
+                                diffShow: DiffShow[A],
+                                skipPredicate: SkipPredicate[A]): Future[Unit] = {
+    def applyDiff(): Future[Result] = {
+      for {
+        controlValue <- control
+        candidateValue <- candidate
+      } yield errorLogging("diffExperiment applyDiff", s"$controlValue \n \n $candidateValue") {
+        if (skipPredicate.skip(controlValue) || skipPredicate.skip(candidateValue))
+          SkipResult
+        else
+          Result.fromDiffResult(
+            controlValue,
+            candidateValue,
+            name,
+            diffShow.diff(controlValue, candidateValue)
+          )
+      }
+    }
+
+    applyDiff()
+      .recover { case e => ExperimentFailure(name, e) }
+      .map {
+        case m @ Match(_, _, _) => Experiment.logResult(m)
+        case _ if retries > 0 =>
+          lazy val newControl = retryControl.getOrElse(control)
+          delayedBlocking(name, newControl, candidate, retries - 1, retryControl, 10 seconds)
+          ()
+        case r => Experiment.logResult(r)
+      }
+  }
+
+  def delayedBlocking[A](name: String,
+                         control: => Future[A],
+                         candidate: => Future[A],
+                         retries: Int = 0,
+                         retryControl: => Option[Future[A]] = None,
+                         candidateDelay: FiniteDuration = experimentDelay)
+                        (implicit
+                         actorSystem: ActorSystem,
+                         diffShow: DiffShow[A],
+                         skipPredicate: SkipPredicate[A]): Future[Unit] = {
+
+    after(candidateDelay, actorSystem.scheduler) {
+      diffExperiment(name, control, candidate, retries, retryControl)
+    }
+  }
+}
+
+
+
+trait SkipPredicate[A] {
+  def skip(v: A): Boolean
+}
+
+object SkipPredicate {
+  val skipBound: Int = 100059326
+  def build[A](f: A => Boolean): SkipPredicate[A] = new SkipPredicate[A] {
+    override def skip(v: A): Boolean = f(v)
+  }
+  def skip[A](v: A)(implicit skipPredicate: SkipPredicate[A]): Boolean = skipPredicate.skip(v)
+}
+
+trait LowPriorityImplicits {
+  implicit def defaultSkip[A]: SkipPredicate[A] = SkipPredicate.build(_ => false)
+}
+
+trait HighPriorityImplicits extends LowPriorityImplicits {
+
+  implicit def optionSkip[A](implicit sp: SkipPredicate[A]): SkipPredicate[Option[A]] = SkipPredicate.build(v => v.flatMap(Option.apply).exists(sp.skip))
+
+  implicit def eitherSkip[A,B](implicit es1: SkipPredicate[A], es2: SkipPredicate[B]): SkipPredicate[\/[A, B]] = SkipPredicate.build {
+    case \/-(x) => es2.skip(x)
+    case -\/(x) => es1.skip(x)
+  }
+
+  implicit val userSkip: SkipPredicate[User] = SkipPredicate.build(u => u.id > SkipPredicate.skipBound.toString)
+}
+
+object implicits extends HighPriorityImplicits
