@@ -7,6 +7,7 @@ import akka.actor.ActorSystem
 import com.typesafe.scalalogging.LazyLogging
 import akka.pattern.after
 import models.client.User
+import org.joda.time.DateTime
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.{FiniteDuration, _}
@@ -139,6 +140,16 @@ trait HighPriorityImplicits extends LowPriorityImplicits {
   }
 
   implicit val userSkip: SkipPredicate[User] = SkipPredicate.build(u => u.id > SkipPredicate.skipBound.toString)
+
+  implicit def localTimeDiffShow: DiffShow[DateTime] = new DiffShow[DateTime] {
+    def show(d: DateTime): String = d.getMillis.toString
+    def diff(l: DateTime, r: DateTime): Comparison = {
+      if (math.abs(l.getMillis - r.getMillis) > 10000)
+        Different(l, r)
+      else
+        Identical(l)
+    }
+  }
 }
 
 object implicits extends HighPriorityImplicits

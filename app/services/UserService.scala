@@ -38,12 +38,6 @@ import scalaz.{-\/, EitherT, \/, \/-}
     postgresUsersReadRepository: PostgresUserRepository)
     (implicit ec: ExecutionContext, actorSystem: ActorSystem) extends Logging {
 
-  implicit val dateTimeDiffShow: DiffShow[DateTime] = new DiffShow[DateTime] {
-    def show ( d: DateTime ) = "DateTime(" + d.toString + ")"
-    def diff( l: DateTime, r: DateTime ) =
-      if ( l isEqual r ) Identical( l ) else Different( l, r )
-  }
-
   def update(existingUser: User, userUpdateRequest: UserUpdateRequest): ApiResponse[User] = {
     val emailValid = isEmailValid(existingUser, userUpdateRequest)
     val usernameValid = isUsernameValid(existingUser, userUpdateRequest)
