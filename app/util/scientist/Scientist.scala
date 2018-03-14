@@ -164,7 +164,7 @@ trait HighPriorityImplicits extends LowPriorityImplicits {
          leftSeq
            .zip(rightSeq)
            .find(p => !ed.diff(p._1, p._2).isIdentical)
-           .fold(Identical(leftSeq): Comparison)(_ => Different(left, right))
+           .fold(Identical(leftSeq): Comparison)(_ => Different(leftSeq, rightSeq))
        }
      }
    }
