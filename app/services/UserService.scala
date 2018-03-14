@@ -145,7 +145,9 @@ import scalaz.{-\/, EitherT, \/, \/-}
     Experiment.delayedBlocking[ApiError \/ SearchResponse](
       "SearchUser",
       mongoSearchResult,
-      postgresUsersReadRepository.search(query, limit, offset)
+      postgresUsersReadRepository.search(query, limit, offset),
+      2,
+      Some(usersReadRepository.search(query, limit, offset))
     )
     val activeUsersF = EitherT(mongoSearchResult)
     val deletedUsersF = EitherT(postgresDeletedUserRepository.search(query))
@@ -249,7 +251,9 @@ import scalaz.{-\/, EitherT, \/, \/-}
     Experiment.delayedBlocking[ApiError \/ Option[User]](
       "FindUser",
       mongoResult,
-      postgresUsersReadRepository.findById(id)
+      postgresUsersReadRepository.findById(id),
+      2,
+      Some(usersReadRepository.find(id))
     )
     val activeUserOptF = EitherT(mongoResult)
 

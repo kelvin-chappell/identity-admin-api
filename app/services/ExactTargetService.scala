@@ -68,7 +68,9 @@ import scala.util.{Failure, Success, Try}
     Experiment.delayedBlocking[ApiError \/ Option[User]](
       "FindUser",
       mongoResult,
-      postgresUsersReadRepository.findById(identityId)
+      postgresUsersReadRepository.findById(identityId),
+      2,
+      Some(usersReadRepository.find(identityId))
     )
     mongoResult
   }
