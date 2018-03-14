@@ -72,7 +72,23 @@ class AuthenticatedAction @Inject() (val parser: BodyParsers.Default)(implicit v
     extends ActionBuilder[Request, AnyContent] with Logging {
 
   def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]): Future[Result] = {
-    block(request)
+    Try {
+      val authorization = request.headers.get(HeaderNames.AUTHORIZATION).getOrElse(throw new IllegalArgumentException("Authorization header is required."))
+      val hmac = HmacAuthenticator.extractToken(authorization).getOrElse(throw new IllegalArgumentException("Authorization header is invalid."))
+      val date = request.headers.get(HeaderNames.DATE).getOrElse(throw new scala.IllegalArgumentException("Date header is required."))
+      val uri = request.uri
 
+      logger.trace(s"path: $uri, date: $date, hmac: $hmac")
+
+      if (HmacAuthenticator.isDateValid(date) && HmacAuthenticator.isHmacValid(date, uri, hmac)) {
+        Success
+      } else {
+        throw new IllegalArgumentException("Authorization token is invalid.")
+      }
+    } match {
+      case Success(r) => block(request)
+      case Failure(error) =>
+        Future.successful(Unauthorized(ApiError("Authorization failure", error.getMessage)))
+    }
   }
 }
