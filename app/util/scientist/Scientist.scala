@@ -150,6 +150,24 @@ trait HighPriorityImplicits extends LowPriorityImplicits {
         Identical(l)
     }
   }
+
+   implicit def unorderedIterableDiff[A](implicit ed: DiffShow[A]): DiffShow[Iterable[A]] = new DiffShow[Iterable[A]] {
+     override def show(t: Iterable[A]): String = t.toSeq.sortBy(_.toString).toString()
+
+     override def diff(left: Iterable[A], right: Iterable[A]): Comparison = {
+       val leftSeq = left.toSeq.sortBy(_.toString)
+       val rightSeq = right.toSeq.sortBy(_.toString)
+
+       if (left.size != right.size) {
+         Different(leftSeq, rightSeq)
+       } else {
+         leftSeq
+           .zip(rightSeq)
+           .find(p => !ed.diff(p._1, p._2).isIdentical)
+           .fold(Identical(leftSeq): Comparison)(_ => Different(leftSeq, rightSeq))
+       }
+     }
+   }
 }
 
 object implicits extends HighPriorityImplicits
