@@ -2,11 +2,13 @@ package repositories.postgres
 
 import java.util.UUID
 
+import actors.MetricsActorProviderStub
+import akka.actor.ActorSystem
 import com.google.common.util.concurrent.MoreExecutors
 import models.client.{ReservedUsername, ReservedUsernameList}
 import models.database.postgres.PostgresReservedUsernameRepository
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{DoNotDiscover, Matchers, WordSpecLike}
+import org.scalatest.{BeforeAndAfterAll, DoNotDiscover, Matchers, WordSpecLike}
 import play.api.libs.json.Json._
 import scalikejdbc._
 import support.PgTestUtils
@@ -18,12 +20,19 @@ import scalaz.\/-
 class PostgresReservedUsernameRepositoryTest extends WordSpecLike
   with Matchers
   with PgTestUtils
-  with ScalaFutures {
+  with ScalaFutures
+  with BeforeAndAfterAll {
+
+  val actorSystem = ActorSystem()
+
+  override def afterAll(): Unit = {
+    actorSystem.terminate()
+  }
 
   trait TestFixture {
     execSql(sql"truncate table reservedusernames")
     private val executor = ExecutionContext.fromExecutor(MoreExecutors.directExecutor())
-    val repo = new PostgresReservedUsernameRepository()(executor)
+    val repo = new PostgresReservedUsernameRepository(actorSystem, MetricsActorProviderStub)(executor)
     val usernames = List.fill(25)(ReservedUsername(UUID.randomUUID().toString))
     usernames.foreach { username =>
       execSql(

@@ -5,7 +5,7 @@ import java.util.UUID
 import actors.metrics.{MetricsActorProvider, MetricsSupport}
 import akka.actor.ActorSystem
 import com.google.inject.Inject
-import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import models.client
 import models.client.{ApiError, ApiResponse, ReservedUsername, ReservedUsernameList}
 import play.api.libs.json.Json.{parse, stringify, toJson}
@@ -15,7 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scalaz.{-\/, \/-}
 
 class PostgresReservedUsernameRepository @Inject()(val actorSystem: ActorSystem,
-                                                   val metricsActorProvider: MetricsActorProvider)(implicit ec: ExecutionContext) extends Logging
+                                                   val metricsActorProvider: MetricsActorProvider)(implicit ec: ExecutionContext) extends LazyLogging
   with PostgresJsonFormats
   with PostgresUtils
   with MetricsSupport {

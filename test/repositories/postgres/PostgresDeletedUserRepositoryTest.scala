@@ -1,9 +1,11 @@
 package repositories.postgres
 
+import actors.MetricsActorProviderStub
+import akka.actor.ActorSystem
 import com.google.common.util.concurrent.MoreExecutors
 import models.database.postgres.PostgresDeletedUserRepository
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{DoNotDiscover, Matchers, WordSpecLike}
+import org.scalatest.{BeforeAndAfterAll, DoNotDiscover, Matchers, WordSpecLike}
 import scalikejdbc._
 import support.PgTestUtils
 
@@ -14,11 +16,18 @@ import scalaz.\/-
 class PostgresDeletedUserRepositoryTest extends WordSpecLike
   with Matchers
   with PgTestUtils
-  with ScalaFutures {
+  with ScalaFutures
+  with BeforeAndAfterAll {
+
+  val actorSystem = ActorSystem()
+
+  override def afterAll(): Unit = {
+    actorSystem.terminate()
+  }
 
   trait TestFixture {
     private val executor = ExecutionContext.fromExecutor(MoreExecutors.directExecutor())
-    val repo = new PostgresDeletedUserRepository()(executor)
+    val repo = new PostgresDeletedUserRepository(actorSystem, MetricsActorProviderStub)
     execSql(sql"""
                  | INSERT INTO reservedemails (id, jdoc) values
                  | ('1234', '{"_id": "1234", "email": "foo@example.com", "username": "admin"}'::jsonb)

@@ -12,7 +12,8 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
-import scalaz.{-\/, EitherT, \/, \/-}
+import scalaz._
+import Scalaz._
 
 object MetricsSupport {
   case class Namespace(name: String)
@@ -23,6 +24,7 @@ trait MetricsSupport extends LazyLogging {
 
   def actorSystem: ActorSystem
   def metricsActorProvider: MetricsActorProvider
+  private implicit val ec = actorSystem.dispatcher
 
   private def reportSuccess(inProgressSwitch: AtomicReference[Boolean], namespace: Namespace, name: String, stopWatch: StopWatch): Unit = {
     if (inProgressSwitch.getAndSet(false)) {

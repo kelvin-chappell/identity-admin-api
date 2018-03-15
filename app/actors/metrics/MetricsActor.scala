@@ -10,7 +10,7 @@ import scala.language.postfixOps
 
 class MetricsActor(cloudWatch: CloudWatch) extends Actor {
   import MetricsActor._
-  context.system.scheduler.schedule(10 seconds, 10 seconds, self, Tick)
+  context.system.scheduler.schedule(10 seconds, 10 seconds, self, Tick)(context.dispatcher)
 
   var samples = Samples()
 
@@ -31,7 +31,7 @@ object MetricsActor {
 
 @Singleton
 class MetricsActorProvider @Inject()(actorSystem: ActorSystem, cloudwatch: CloudWatch) extends Provider[ActorRef] {
-  private val metricsActorProvider: ActorRef = actorSystem.actorOf(MetricsActor.props(cloudwatch))
+  private lazy val metricsActorProvider: ActorRef = actorSystem.actorOf(MetricsActor.props(cloudwatch))
 
   override def get(): ActorRef = metricsActorProvider
 }

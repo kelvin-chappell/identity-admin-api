@@ -6,6 +6,7 @@ import actors.metrics.{MetricsActorProvider, MetricsSupport}
 import akka.actor.ActorSystem
 import com.google.inject.{Inject, Singleton}
 import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import models.client.{ApiResponse, SearchResponse}
 import models.database.mongo.{DeletedUser, IdentityUser}
 import play.api.libs.json.Json
@@ -16,7 +17,7 @@ import scalaz.\/-
 
 @Singleton class PostgresDeletedUserRepository @Inject()(val actorSystem: ActorSystem,
                                                          val metricsActorProvider: MetricsActorProvider)
-  extends Logging with PostgresJsonFormats with PostgresUtils with MetricsSupport {
+  extends PostgresJsonFormats with PostgresUtils with MetricsSupport with LazyLogging {
 
   implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
 

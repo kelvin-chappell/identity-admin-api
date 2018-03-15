@@ -5,7 +5,7 @@ import java.util.concurrent.Executors
 import actors.metrics.{MetricsActorProvider, MetricsSupport}
 import akka.actor.ActorSystem
 import com.google.inject.{Inject, Singleton}
-import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import configuration.Config.SearchValidation
 import models.client._
 import models.database.mongo.IdentityUser
@@ -18,7 +18,7 @@ import scalaz.syntax.either._
 
 @Singleton
 class PostgresUserRepository @Inject()(val actorSystem: ActorSystem,
-                                       val metricsActorProvider: MetricsActorProvider) extends Logging
+                                       val metricsActorProvider: MetricsActorProvider) extends LazyLogging
   with PostgresJsonFormats
   with PostgresUtils
   with MetricsSupport{
