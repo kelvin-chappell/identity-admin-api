@@ -26,6 +26,7 @@ class PostgresReservedUsernameRepositoryTest extends WordSpecLike
   val actorSystem = ActorSystem()
 
   override def afterAll(): Unit = {
+    super.afterAll()
     actorSystem.terminate()
   }
 

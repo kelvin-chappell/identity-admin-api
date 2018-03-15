@@ -23,9 +23,9 @@ import scalaz.\/-
   def findBy(query: String): ApiResponse[Option[DeletedUser]] = withMetricsFE("deletedUser.findBy", query) {
     readOnly { implicit session =>
       val _query = query.toLowerCase
-      val idMatcher = JsObject(Seq("_id" -> JsString(_query)))
-      val usernameMatcher = JsObject(Seq("username" -> JsString(_query)))
-      val emailMatcher = JsObject(Seq("email" -> JsString(_query)))
+      val idMatcher = JsObject(Seq("_id" -> JsString(_query))).toString
+      val usernameMatcher = JsObject(Seq("username" -> JsString(_query))).toString
+      val emailMatcher = JsObject(Seq("email" -> JsString(_query))).toString
       val sqlQuery =
         sql"""
              | SELECT jdoc FROM reservedemails
