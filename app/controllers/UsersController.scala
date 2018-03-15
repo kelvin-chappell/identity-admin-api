@@ -43,7 +43,7 @@ import models.client.ApiError._
       limit.exists(_ < 0) ? "limit must be a positive integer".failure[Option[Int]] | limit.success[String]
 
     val offsetValid =
-      offset.exists(offset => offset < 0  && offset < 500) ? "offset must be a positive integer less than 500".failure[Option[Int]] | offset.success[String]
+      offset.exists(offset => offset < 0  && offset < 50) ? "offset must be a positive integer less than 50".failure[Option[Int]] | offset.success[String]
 
     (queryValid |@| limitValid |@| offsetValid) { (query, limit, offset) =>
       EitherT(userService.search(query, limit, offset)).fold(

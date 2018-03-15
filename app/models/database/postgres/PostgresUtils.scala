@@ -1,14 +1,16 @@
 package models.database.postgres
 
-import com.gu.identity.util.Logging
+import actors.metrics.MetricsSupport.Namespace
+import com.typesafe.scalalogging.LazyLogging
 import models.client.{ApiError, ApiResponse}
 import scalikejdbc.{DB, DBSession}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.\/
 
-trait PostgresUtils {
-  self: Logging =>
+trait PostgresUtils extends LazyLogging {
+
+  implicit val namespace: Namespace = Namespace("Postgres-repo")
 
   def logFailure(msg: String): Throwable => ApiError = { t =>
     logger.error(msg, t)

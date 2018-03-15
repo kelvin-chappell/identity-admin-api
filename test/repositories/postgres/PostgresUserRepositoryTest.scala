@@ -1,12 +1,14 @@
 package repositories.postgres
 
+import actors.MetricsActorProviderStub
+import akka.actor.ActorSystem
 import com.google.common.util.concurrent.MoreExecutors
 import models.client.{ApiResponse, SearchResponse, User, UserUpdateRequest}
 import models.database.mongo._
 import models.database.postgres.PostgresUserRepository
 import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{DoNotDiscover, Matchers, WordSpecLike}
+import org.scalatest.{BeforeAndAfterAll, DoNotDiscover, Matchers, WordSpecLike}
 import play.api.libs.json.Json
 import scalikejdbc._
 import support.PgTestUtils
@@ -19,10 +21,18 @@ import scalaz.syntax.std.option._
 class PostgresUserRepositoryTest extends WordSpecLike
   with Matchers
   with PgTestUtils
-  with ScalaFutures {
+  with ScalaFutures
+  with BeforeAndAfterAll {
+
+  val actorSystem = ActorSystem()
+
+  override def afterAll(): Unit = {
+    super.afterAll()
+    actorSystem.terminate()
+  }
 
   trait TestFixture {
-    val repo = new PostgresUserRepository()
+    val repo = new PostgresUserRepository(actorSystem, MetricsActorProviderStub)
     implicit val ec = repo.ec
     val testUser = IdentityUser(
       "identitydev@guardian.co.uk", "1234",
