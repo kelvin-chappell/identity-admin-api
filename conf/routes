@@ -12,7 +12,3 @@ POST       /v1/user/:email/unsubscribe-email        @controllers.UsersController
 POST       /v1/user/:email/activate-email           @controllers.UsersController.activateEmailSubscriptions(email: String)
 
 GET        /v1/orphan/:email                        @controllers.UsersController.findOrphanByEmail(email: String)
-
-GET        /v1/reserved-username                    @controllers.ReservedUsernameController.getReservedUsernames
-POST       /v1/reserved-username                    @controllers.ReservedUsernameController.reserveUsername()
-DELETE     /v1/reserved-username                    @controllers.ReservedUsernameController.unreserveUsername()
