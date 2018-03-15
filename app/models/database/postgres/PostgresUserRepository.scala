@@ -26,7 +26,7 @@ class PostgresUserRepository @Inject()(val actorSystem: ActorSystem,
   implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
 
   def search(query: String, limit: Option[Int] = None, offset: Option[Int] = None): ApiResponse[SearchResponse] = withMetricsFE("user.search", s"$query $limit $offset") {
-    val _offset = math.min(offset.getOrElse(0), SearchValidation.maxOffset)
+    val _offset = offset.getOrElse(0)
     val _limit = limit.getOrElse(SearchValidation.maximumLimit)
     val lowcaseQuery = query.toLowerCase
     val sql =

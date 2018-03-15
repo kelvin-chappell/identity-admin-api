@@ -5,11 +5,10 @@ import java.util.concurrent.Executors
 import actors.metrics.{MetricsActorProvider, MetricsSupport}
 import akka.actor.ActorSystem
 import com.google.inject.{Inject, Singleton}
-import com.gu.identity.util.Logging
 import com.typesafe.scalalogging.LazyLogging
 import models.client.{ApiResponse, SearchResponse}
 import models.database.mongo.{DeletedUser, IdentityUser}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, JsString, Json}
 import scalikejdbc._
 
 import scala.concurrent.ExecutionContext
@@ -24,9 +23,9 @@ import scalaz.\/-
   def findBy(query: String): ApiResponse[Option[DeletedUser]] = withMetricsFE("deletedUser.findBy", query) {
     readOnly { implicit session =>
       val _query = query.toLowerCase
-      val idMatcher = s"""{"_id":"${_query}"}"""
-      val usernameMatcher = s"""{"username":"${_query}"}"""
-      val emailMatcher = s"""{"email":"${_query}"}"""
+      val idMatcher = JsObject(Seq("_id" -> JsString(_query)))
+      val usernameMatcher = JsObject(Seq("username" -> JsString(_query)))
+      val emailMatcher = JsObject(Seq("email" -> JsString(_query)))
       val sqlQuery =
         sql"""
              | SELECT jdoc FROM reservedemails
