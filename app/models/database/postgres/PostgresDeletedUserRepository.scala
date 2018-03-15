@@ -1,5 +1,9 @@
 package models.database.postgres
 
+import java.util.concurrent.Executors
+
+import actors.metrics.{MetricsActorProvider, MetricsSupport}
+import akka.actor.ActorSystem
 import com.google.inject.{Inject, Singleton}
 import com.gu.identity.util.Logging
 import models.client.{ApiResponse, SearchResponse}
@@ -10,29 +14,33 @@ import scalikejdbc._
 import scala.concurrent.ExecutionContext
 import scalaz.\/-
 
-@Singleton class PostgresDeletedUserRepository @Inject()(implicit ec: ExecutionContext) extends Logging
-  with PostgresJsonFormats
-  with PostgresUtils {
+@Singleton class PostgresDeletedUserRepository @Inject()(val actorSystem: ActorSystem,
+                                                         val metricsActorProvider: MetricsActorProvider)
+  extends Logging with PostgresJsonFormats with PostgresUtils with MetricsSupport {
 
-  def findBy(query: String): ApiResponse[Option[DeletedUser]] = readOnly { implicit session =>
-    val _query = query.toLowerCase
-    val idMatcher = s"""{"_id":"${_query}"}"""
-    val usernameMatcher = s"""{"username":"${_query}"}"""
-    val emailMatcher = s"""{"email":"${_query}"}"""
-    val sqlQuery =
-      sql"""
-           | SELECT jdoc FROM reservedemails
-           | WHERE jdoc@>$idMatcher::jsonb
-           | OR jdoc@>$emailMatcher::jsonb
-           | OR jdoc@>$usernameMatcher::jsonb
-           | order by jdoc->>'username'
+  implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
+
+  def findBy(query: String): ApiResponse[Option[DeletedUser]] = withMetricsFE("deletedUser.findBy", query) {
+    readOnly { implicit session =>
+      val _query = query.toLowerCase
+      val idMatcher = s"""{"_id":"${_query}"}"""
+      val usernameMatcher = s"""{"username":"${_query}"}"""
+      val emailMatcher = s"""{"email":"${_query}"}"""
+      val sqlQuery =
+        sql"""
+             | SELECT jdoc FROM reservedemails
+             | WHERE jdoc@>$idMatcher::jsonb
+             | OR jdoc@>$emailMatcher::jsonb
+             | OR jdoc@>$usernameMatcher::jsonb
+             | order by jdoc->>'username'
        """.stripMargin
-    sqlQuery.map(_.string(1)).single.apply.map(
-      Json.parse(_).as[DeletedUser]
-    )
-  }(logFailure(s"Failed to find deleted users for query: $query"))
+      sqlQuery.map(_.string(1)).single.apply.map(
+        Json.parse(_).as[DeletedUser]
+      )
+    }(logFailure(s"Failed to find deleted users for query: $query"))
+  }
 
-  def remove(id: String): ApiResponse[Int] = {
+  def remove(id: String): ApiResponse[Int] = withMetricsFE("deletedUser.remove", id) {
     val sqlQuery =
       sql"""
            | DELETE FROM reservedemails

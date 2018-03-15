@@ -16,6 +16,7 @@ object Config {
   object SearchValidation {
     val minimumQueryLength = config.getInt("search-validation.minimumQueryLength")
     val maximumLimit = config.getInt("search-validation.maximumLimit")
+    val maxOffset = config.getInt("search-validation.maximumOffset")
   }
 
   object AWS {

@@ -1,5 +1,6 @@
 package models.database.postgres
 
+import actors.metrics.MetricsSupport.Namespace
 import com.gu.identity.util.Logging
 import models.client.{ApiError, ApiResponse}
 import scalikejdbc.{DB, DBSession}
@@ -9,6 +10,8 @@ import scalaz.\/
 
 trait PostgresUtils {
   self: Logging =>
+
+  implicit val namespace: Namespace = Namespace("Postgres-repo")
 
   def logFailure(msg: String): Throwable => ApiError = { t =>
     logger.error(msg, t)

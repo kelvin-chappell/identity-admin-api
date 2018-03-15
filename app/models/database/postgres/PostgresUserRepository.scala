@@ -2,6 +2,8 @@ package models.database.postgres
 
 import java.util.concurrent.Executors
 
+import actors.metrics.{MetricsActorProvider, MetricsSupport}
+import akka.actor.ActorSystem
 import com.google.inject.{Inject, Singleton}
 import com.gu.identity.util.Logging
 import configuration.Config.SearchValidation
@@ -15,14 +17,16 @@ import scalaz.-\/
 import scalaz.syntax.either._
 
 @Singleton
-class PostgresUserRepository @Inject() extends Logging
+class PostgresUserRepository @Inject()(val actorSystem: ActorSystem,
+                                       val metricsActorProvider: MetricsActorProvider) extends Logging
   with PostgresJsonFormats
-  with PostgresUtils {
+  with PostgresUtils
+  with MetricsSupport{
 
   implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
 
-  def search(query: String, limit: Option[Int] = None, offset: Option[Int] = None): ApiResponse[SearchResponse] = {
-    val _offset = offset.getOrElse(0)
+  def search(query: String, limit: Option[Int] = None, offset: Option[Int] = None): ApiResponse[SearchResponse] = withMetricsFE("user.search", s"$query $limit $offset") {
+    val _offset = math.min(offset.getOrElse(0), SearchValidation.maxOffset)
     val _limit = limit.getOrElse(SearchValidation.maximumLimit)
     val lowcaseQuery = query.toLowerCase
     val sql =
@@ -46,7 +50,7 @@ class PostgresUserRepository @Inject() extends Logging
     }(logFailure("Failed to search users table"))
   }
 
-  def findById(id: String): ApiResponse[Option[User]] = {
+  def findById(id: String): ApiResponse[Option[User]] = withMetricsFE("user.findById", id) {
     val sql =
       sql"""
            |SELECT jdoc FROM users
@@ -59,7 +63,7 @@ class PostgresUserRepository @Inject() extends Logging
     }(logFailure("Failed find user by id"))
   }
 
-  def update(user: User, userUpdateRequest: UserUpdateRequest): ApiResponse[User] = {
+  def update(user: User, userUpdateRequest: UserUpdateRequest): ApiResponse[User] = withMetricsFE("user.update", s"$user $userUpdateRequest") {
     val persistedUser = DB.readOnly { implicit s =>
       sql"select jdoc from users where id=${user.id} limit 1"
         .map(rs => Json.parse(rs.string(1)).as[IdentityUser])
@@ -81,7 +85,7 @@ class PostgresUserRepository @Inject() extends Logging
     }
   }
 
-  def delete(user: User): ApiResponse[Int] = {
+  def delete(user: User): ApiResponse[Int] = withMetricsFE("user.delete", s"$user") {
     val query = sql"delete from users where id=${user.id}"
     localTx { implicit s =>
       query.update().apply()
@@ -92,7 +96,7 @@ class PostgresUserRepository @Inject() extends Logging
     -\/(ApiError(title, error.getMessage))
   }
 
-  def updateEmailValidationStatus(user: User, emailValidated: Boolean): ApiResponse[User] = {
+  def updateEmailValidationStatus(user: User, emailValidated: Boolean): ApiResponse[User] = withMetricsFE("user.updateEmailValidationStatus", s"$user $emailValidated") {
     val boolString = emailValidated.toString.toLowerCase
     val query = sql"update users set jdoc=jsonb_set(jdoc, '{statusFields,userEmailValidated}', ${boolString}::jsonb) where id=${user.id} "
     localTx { implicit s =>
@@ -101,7 +105,7 @@ class PostgresUserRepository @Inject() extends Logging
     }(logFailure(s"Failed to update email validated status for user ${user.id}"))
   }
 
-  def unsubscribeFromMarketingEmails(email: String): ApiResponse[Int] ={
+  def unsubscribeFromMarketingEmails(email: String): ApiResponse[Int] = withMetricsFE("user.unsubscribeFromMarketingEmails", email) {
     val query = sql"update users set jdoc=jsonb_set(jdoc, '{statusFields,receive3rdPartyMarketing}', 'false'::jsonb) where (jdoc#>>'{searchFields,emailAddress}')=${email} "
     localTx { implicit s =>
       query.update().apply()
