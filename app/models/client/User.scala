@@ -36,7 +36,8 @@ object Address {
 
 case class UserStatus(receive3rdPartyMarketing: Option[Boolean] = None,
                       receiveGnmMarketing: Option[Boolean] = None,
-                      userEmailValidated: Option[Boolean] = None)
+                      userEmailValidated: Option[Boolean] = None,
+                      hasRepermissioned: Option[Boolean] = None)
 
 object UserStatus {
   implicit val format = Json.format[UserStatus]
@@ -216,7 +217,8 @@ object User {
       status = UserStatus(
         receive3rdPartyMarketing = user.statusFields.flatMap(_.receive3rdPartyMarketing),
         receiveGnmMarketing = user.statusFields.flatMap(_.receiveGnmMarketing),
-        userEmailValidated = user.statusFields.flatMap(_.userEmailValidated)
+        userEmailValidated = user.statusFields.flatMap(_.userEmailValidated),
+        hasRepermissioned = user.statusFields.flatMap(_.hasRepermissioned)
       ),
       consents = user.consents.map(c => Consent(c.actor, c.id, c.version, c.consented, c.timestamp, c.privacyPolicyVersion)),
       groups = user.userGroups.map(g => UserGroup(g.packageCode, g.path, g.joinedDate)),

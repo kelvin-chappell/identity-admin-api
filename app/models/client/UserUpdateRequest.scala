@@ -13,6 +13,7 @@ case class UserUpdateRequest(
   interests: Option[String] = None,
   receiveGnmMarketing: Option[Boolean] = None,
   receive3rdPartyMarketing: Option[Boolean] = None,
+  hasRepermissioned: Option[Boolean] = None,
   consents: List[Consent] = Nil,
   userEmailValidated: Option[Boolean] = None)
 
