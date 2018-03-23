@@ -12,8 +12,6 @@ import models.database.mongo.UsersReadRepository
 import models.database.postgres.PostgresUserRepository
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-import util.scientist.Experiment
-import util.scientist.implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.std.scalaFuture._
@@ -63,21 +61,10 @@ import scala.util.{Failure, Success, Try}
       case None => EitherT.right(Future.successful({}))
     }.run
 
-  private def dualFind(identityId: String): ApiResponse[Option[User]] = {
-    val mongoResult = usersReadRepository.find(identityId)
-    Experiment.delayedBlocking[ApiError \/ Option[User]](
-      "FindUser",
-      mongoResult,
-      postgresUsersReadRepository.findById(identityId),
-      2,
-      Some(usersReadRepository.find(identityId))
-    )
-    mongoResult
-  }
 
   def newslettersSubscriptionByIdentityId(identityId: String): ApiResponse[Option[NewslettersSubscription]] = {
 
-    EitherT(dualFind(identityId)).flatMap {
+    EitherT(postgresUsersReadRepository.findById(identityId)).flatMap {
       case Some(user) => EitherT(newslettersSubscriptionByEmail(user.email))
       case None => EitherT.right(Future.successful(Option.empty[NewslettersSubscription]))
     }.run
@@ -216,13 +203,13 @@ import scala.util.{Failure, Success, Try}
   }
 
   def subscriberByIdentityId(identityId: String): ApiResponse[Option[ExactTargetSubscriber]] =
-    EitherT(dualFind(identityId)).flatMap {
+    EitherT(postgresUsersReadRepository.findById(identityId)).flatMap {
       case Some(user) => EitherT(subscriberByEmail(user.email))
       case None => EitherT.right(Future.successful(Option.empty[ExactTargetSubscriber]))
     }.run
 
   def contributionsByIdentityId(identityId: String): ApiResponse[List[Contribution]] =
-    EitherT(dualFind(identityId)).flatMap {
+    EitherT(postgresUsersReadRepository.findById(identityId)).flatMap {
       case Some(user) => EitherT(contributionsByEmail(user.email))
       case None => EitherT.right(Future.successful(List.empty[Contribution]))
     }.run
