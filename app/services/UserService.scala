@@ -16,8 +16,6 @@ import models.database.postgres.{PostgresDeletedUserRepository, PostgresReserved
 import org.joda.time.DateTime
 import uk.gov.hmrc.emailaddress.EmailAddress
 import util.UserConverter._
-import util.scientist.Experiment
-import util.scientist.implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.std.scalaFuture._
@@ -49,13 +47,12 @@ import scalaz.{-\/, EitherT, \/, \/-}
         val userEmailValidatedChanged = isEmailValidationChanged(userEmailValidated, existingUser.status.userEmailValidated)
         val usernameChanged = isUsernameChanged(userUpdateRequest.username, existingUser.username)
         val displayNameChanged = isDisplayNameChanged(userUpdateRequest.displayName, existingUser.displayName)
-        val mongoWrite = usersWriteRepository.update(existingUser, userUpdateRequest)
-        Experiment.delayedBlocking[ApiError \/ User](
-          "UpdateUser",
-          mongoWrite,
-          postgresUsersReadRepository.update(existingUser, userUpdateRequest)
-        )
-        EitherT(mongoWrite).map { result =>
+
+        // TODO remove mongo
+        usersWriteRepository.update(existingUser, userUpdateRequest)
+        val updatedUser = postgresUsersReadRepository.update(existingUser, userUpdateRequest)
+
+        EitherT(updatedUser).map { result =>
           triggerEvents(
             userId = existingUser.id,
             usernameChanged = usernameChanged,
@@ -141,15 +138,7 @@ import scalaz.{-\/, EitherT, \/, \/-}
     val usersByMemNumF = EitherT(searchIdentityByMembership(query))
     val orphansF = EitherT(searchOrphan(query))
     val usersBySubIdF = EitherT(searchIdentityBySubscriptionId(query))
-    val mongoSearchResult = usersReadRepository.search(query, limit, offset)
-    Experiment.delayedBlocking[ApiError \/ SearchResponse](
-      "SearchUser",
-      mongoSearchResult,
-      postgresUsersReadRepository.search(query, limit, offset),
-      2,
-      Some(usersReadRepository.search(query, limit, offset))
-    )
-    val activeUsersF = EitherT(mongoSearchResult)
+    val activeUsersF = EitherT(postgresUsersReadRepository.search(query, limit, offset))
     val deletedUsersF = EitherT(postgresDeletedUserRepository.search(query))
 
     (for {
@@ -247,15 +236,7 @@ import scalaz.{-\/, EitherT, \/, \/-}
       )
 
     val deletedUserOptF = EitherT(postgresDeletedUserRepository.findBy(id))
-    val mongoResult = usersReadRepository.find(id)
-    Experiment.delayedBlocking[ApiError \/ Option[User]](
-      "FindUser",
-      mongoResult,
-      postgresUsersReadRepository.findById(id),
-      2,
-      Some(usersReadRepository.find(id))
-    )
-    val activeUserOptF = EitherT(mongoResult)
+    val activeUserOptF = EitherT(postgresUsersReadRepository.findById(id))
 
     (for {
       activeUserOpt <- activeUserOptF
@@ -270,26 +251,18 @@ import scalaz.{-\/, EitherT, \/, \/-}
 
   def delete(user: GuardianUser): ApiResponse[ReservedUsernameList] = {
     val reserveUsernameResult = user.idapiUser.username.fold(postgresReservedUsernameRepository.loadReservedUsernames)(postgresReservedUsernameRepository.addReservedUsername)
-    val mongoResult = usersWriteRepository.delete(user.idapiUser)
-    Experiment.delayedBlocking[ApiError \/ Unit](
-      "DeleteUser",
-      mongoResult,
-      postgresUsersReadRepository.delete(user.idapiUser).map(_.map(_ => ()))
-    )
+    // TODO delete mongo
+    usersWriteRepository.delete(user.idapiUser)
     (for {
-      _ <- EitherT(mongoResult)
+      _ <- EitherT(postgresUsersReadRepository.delete(user.idapiUser))
       reservedUsernameList <- EitherT(reserveUsernameResult)
     } yield reservedUsernameList).run
   }
 
   def validateEmail(user: User, emailValidated: Boolean = true): ApiResponse[Unit] = {
-    val mongoResult = usersWriteRepository.updateEmailValidationStatus(user, emailValidated)
-    Experiment.delayedBlocking[ApiError \/ User](
-      "ValidateEmail",
-      mongoResult,
-      postgresUsersReadRepository.updateEmailValidationStatus(user, emailValidated)
-    )
-    EitherT(mongoResult).map { _ =>
+    // TODO delete mongo
+    usersWriteRepository.updateEmailValidationStatus(user, emailValidated)
+    EitherT(postgresUsersReadRepository.updateEmailValidationStatus(user, emailValidated)).map { _ =>
       triggerEvents(userId = user.id, usernameChanged = false, displayNameChanged = false, emailValidatedChanged = true)
     }.run
   }
@@ -301,13 +274,9 @@ import scalaz.{-\/, EitherT, \/, \/-}
     } yield()).run
 
   def unsubscribeFromMarketingEmails(email: String): ApiResponse[Int] = {
-    val mongoResult =  usersWriteRepository.unsubscribeFromMarketingEmails(email).map(_.map(_ => 1))
-    Experiment.delayedBlocking[ApiError \/ Int](
-      "UnsubscribeFromMarketing",
-      mongoResult,
-      postgresUsersReadRepository.unsubscribeFromMarketingEmails(email)
-    )
-    mongoResult
+    // TODO delete mongo
+    usersWriteRepository.unsubscribeFromMarketingEmails(email)
+    postgresUsersReadRepository.unsubscribeFromMarketingEmails(email)
   }
 
   def enrichUserWithProducts(user: GuardianUser): ApiResponse[GuardianUser]  = {
