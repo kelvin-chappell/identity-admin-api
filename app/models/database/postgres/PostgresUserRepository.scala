@@ -32,13 +32,14 @@ class PostgresUserRepository @Inject()(val actorSystem: ActorSystem,
     val sql =
       sql"""
        |SELECT jdoc, count(*) OVER() AS full_count FROM users
-       |WHERE jdoc #>> '{searchFields,emailAddress}' = ${lowcaseQuery}
-       |OR jdoc #>> '{searchFields,username}' = ${lowcaseQuery}
-       |OR jdoc #>> '{searchFields,postcode}' = ${lowcaseQuery}
-       |OR jdoc #>> '{searchFields,postcodePrefix}' = ${lowcaseQuery}
-       |OR jdoc #>> '{searchFields,displayName}' = ${lowcaseQuery}
-       |OR jdoc #>> '{privateFields,registrationIp}' = ${lowcaseQuery}
-       |OR jdoc #>> '{privateFields,lastActiveIpAddress}' = ${lowcaseQuery}
+       |WHERE id = $lowcaseQuery
+       |OR jdoc #>> '{searchFields,emailAddress}' = $lowcaseQuery
+       |OR jdoc #>> '{searchFields,username}' = $lowcaseQuery
+       |OR jdoc #>> '{searchFields,postcode}' = $lowcaseQuery
+       |OR jdoc #>> '{searchFields,postcodePrefix}' = $lowcaseQuery
+       |OR jdoc #>> '{searchFields,displayName}' = $lowcaseQuery
+       |OR jdoc #>> '{privateFields,registrationIp}' = $lowcaseQuery
+       |OR jdoc #>> '{privateFields,lastActiveIpAddress}' = $lowcaseQuery
        |order by jdoc#>'{primaryEmailAddress}'
        |LIMIT ${_limit}
        |OFFSET ${_offset}

@@ -63,6 +63,15 @@ class PostgresUserRepositoryTest extends WordSpecLike
       searchResponse.results should not be empty
     }
 
+    "find a user when their id address matches the query" in new TestFixture {
+      whenReady(repo.search("1234")) { result =>
+        val \/-(searchResponse) = result
+        searchResponse.total shouldBe 1
+        searchResponse.results.head.id shouldBe "1234"
+      }
+
+    }
+
     "find a user when their email address matches the query" in new TestFixture {
       checkOneResult(repo.search("identitydev@guardian.co.uk"))
     }
