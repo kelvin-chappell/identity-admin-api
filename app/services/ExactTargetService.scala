@@ -1,14 +1,11 @@
 package services
 
-import javax.inject.{Inject, Singleton}
-
 import akka.actor.ActorSystem
 import com.exacttarget.fuelsdk._
 import com.gu.identity.util.Logging
 import configuration.Config
-import models._
+import javax.inject.{Inject, Singleton}
 import models.client._
-import models.database.mongo.UsersReadRepository
 import models.database.postgres.PostgresUserRepository
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
@@ -16,11 +13,12 @@ import org.joda.time.format.DateTimeFormat
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.std.scalaFuture._
 import scalaz.{-\/, EitherT, \/, \/-}
+
 import scala.collection.JavaConversions._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-@Singleton class ExactTargetService @Inject()(usersReadRepository: UsersReadRepository,
-                                              postgresUsersReadRepository: PostgresUserRepository)
+@Singleton class ExactTargetService @Inject()(postgresUsersReadRepository: PostgresUserRepository)
                                              (implicit ec: ExecutionContext, actorSystem: ActorSystem) extends Logging {
 
   private val dateTimeFormatterUSA = DateTimeFormat.forPattern("MM/dd/yyyy h:mm:ss a")

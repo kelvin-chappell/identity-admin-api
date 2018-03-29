@@ -3,7 +3,6 @@ package services
 import actors.EventPublishingActorProvider
 import akka.actor.ActorSystem
 import models.client._
-import models.database.mongo.{ReservedUserNameWriteRepository, UsersReadRepository, UsersWriteRepository}
 import models.database.postgres.{PostgresDeletedUserRepository, PostgresReservedUsernameRepository, PostgresUserRepository}
 import util.UserConverter._
 import org.mockito.Mockito
@@ -23,8 +22,6 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
 
   val jobsGroup = Seq(UserGroup( "GRS", "/sys/policies/guardian-jobs"))
 
-  val userReadRepo = mock[UsersReadRepository]
-  val userWriteRepo = mock[UsersWriteRepository]
   val identityApiClient = mock[IdentityApiClient]
   val eventPublishingActorProvider = mock[EventPublishingActorProvider]
   val salesforceService = mock[SalesforceService]
@@ -42,12 +39,12 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
   }
 
   val service =
-    spy(new UserService(userReadRepo, userWriteRepo, identityApiClient,
+    spy(new UserService(identityApiClient,
       eventPublishingActorProvider, salesforceService, salesforceIntegration, madgexService, exactTargetService,
       discussionService, pgDeletedUserRepo, pgReservedUsernameRepo, pgUserRepo))
 
   before {
-    Mockito.reset(userReadRepo, userWriteRepo, identityApiClient, eventPublishingActorProvider, service, madgexService, pgReservedUsernameRepo, pgUserRepo, pgDeletedUserRepo)
+    Mockito.reset(identityApiClient, eventPublishingActorProvider, service, madgexService, pgDeletedUserRepo, pgReservedUsernameRepo, pgUserRepo)
   }
 
   "isUsernameChanged" should {
@@ -121,7 +118,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
     "update when email and username are valid" in {
       val user = User("id", "email@theguardian.com")
       val userUpdateRequest = UserUpdateRequest(email = "changedEmail@theguardian.com", username = Some("username"))
-      
+
       val updatedUser = user.copy(email = userUpdateRequest.email)
 
       when(pgUserRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))

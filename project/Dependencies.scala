@@ -16,7 +16,6 @@ object Dependencies {
     "uk.gov.hmrc"                 %%  "emailaddress"          % "2.1.0",
     "com.github.dwhjames"         %%  "aws-wrap"              % "0.8.0",
     "org.scalaz"                  %%  "scalaz-core"           % "7.2.10",
-    "org.reactivemongo"           %%  "play2-reactivemongo"   % "0.12.6-play26",
     "com.exacttarget"             %   "fuelsdk"               % "1.1.0",
     "com.amazonaws"               %   "aws-java-sdk"          % "1.11.105",
     "com.typesafe.play"           %%  "play-json"             % "2.6.3",
