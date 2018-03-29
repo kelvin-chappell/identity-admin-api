@@ -46,7 +46,7 @@ trait EmbeddedPostgresSupport extends BeforeAndAfterAll {
     ConnectionPool.singleton(url, "username", "password")
     createTables("users", "reservedusernames", "reservedemails")
     Runtime.getRuntime.addShutdownHook(new Thread() {
-      override def run() = {
+      override def run(): Unit = {
         stopPostgres()
       }
     })
