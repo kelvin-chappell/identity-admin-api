@@ -16,7 +16,6 @@ object Dependencies {
     "uk.gov.hmrc"                 %%  "emailaddress"          % "2.1.0",
     "com.github.dwhjames"         %%  "aws-wrap"              % "0.8.0",
     "org.scalaz"                  %%  "scalaz-core"           % "7.2.10",
-    "org.reactivemongo"           %%  "play2-reactivemongo"   % "0.12.6-play26",
     "com.exacttarget"             %   "fuelsdk"               % "1.1.0",
     "com.amazonaws"               %   "aws-java-sdk"          % "1.11.105",
     "com.typesafe.play"           %%  "play-json"             % "2.6.3",
@@ -29,7 +28,6 @@ object Dependencies {
 
     "ru.yandex.qatools.embed"     %   "postgresql-embedded"   % "2.4"             % "test",
     "org.scalatest"               %%  "scalatest"             % "3.0.5"           % "test",
-    "com.github.simplyscala"      %%  "scalatest-embedmongo"  % "0.2.3"           % "test",
     "de.leanovate.play-mockws"    %%  "play-mockws"           % "2.6.0"           % "test",
     "org.scalatestplus.play"      %%  "scalatestplus-play"    % "3.1.1"           % "test",
     "com.typesafe.akka"           %%  "akka-slf4j"            % "2.5.4"           % "test",

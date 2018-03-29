@@ -22,8 +22,6 @@ import scalaz.std.scalaFuture._
 import scalaz.{-\/, EitherT, \/, \/-}
 
 @Singleton class UserService @Inject()(
-    usersReadRepository: UsersReadRepository,
-    usersWriteRepository: UsersWriteRepository,
     identityApiClient: IdentityApiClient,
     eventPublishingActorProvider: EventPublishingActorProvider,
     salesforceService: SalesforceService,
@@ -47,12 +45,7 @@ import scalaz.{-\/, EitherT, \/, \/-}
         val userEmailValidatedChanged = isEmailValidationChanged(userEmailValidated, existingUser.status.userEmailValidated)
         val usernameChanged = isUsernameChanged(userUpdateRequest.username, existingUser.username)
         val displayNameChanged = isDisplayNameChanged(userUpdateRequest.displayName, existingUser.displayName)
-
-        // TODO remove mongo
-        usersWriteRepository.update(existingUser, userUpdateRequest)
-        val updatedUser = postgresUsersReadRepository.update(existingUser, userUpdateRequest)
-
-        EitherT(updatedUser).map { result =>
+        EitherT(postgresUsersReadRepository.update(existingUser, userUpdateRequest)).map { result =>
           triggerEvents(
             userId = existingUser.id,
             usernameChanged = usernameChanged,
@@ -251,8 +244,6 @@ import scalaz.{-\/, EitherT, \/, \/-}
 
   def delete(user: GuardianUser): ApiResponse[ReservedUsernameList] = {
     val reserveUsernameResult = user.idapiUser.username.fold(postgresReservedUsernameRepository.loadReservedUsernames)(postgresReservedUsernameRepository.addReservedUsername)
-    // TODO delete mongo
-    usersWriteRepository.delete(user.idapiUser)
     (for {
       _ <- EitherT(postgresUsersReadRepository.delete(user.idapiUser))
       reservedUsernameList <- EitherT(reserveUsernameResult)
@@ -260,8 +251,6 @@ import scalaz.{-\/, EitherT, \/, \/-}
   }
 
   def validateEmail(user: User, emailValidated: Boolean = true): ApiResponse[Unit] = {
-    // TODO delete mongo
-    usersWriteRepository.updateEmailValidationStatus(user, emailValidated)
     EitherT(postgresUsersReadRepository.updateEmailValidationStatus(user, emailValidated)).map { _ =>
       triggerEvents(userId = user.id, usernameChanged = false, displayNameChanged = false, emailValidatedChanged = true)
     }.run
@@ -274,8 +263,6 @@ import scalaz.{-\/, EitherT, \/, \/-}
     } yield()).run
 
   def unsubscribeFromMarketingEmails(email: String): ApiResponse[Int] = {
-    // TODO delete mongo
-    usersWriteRepository.unsubscribeFromMarketingEmails(email)
     postgresUsersReadRepository.unsubscribeFromMarketingEmails(email)
   }
 
