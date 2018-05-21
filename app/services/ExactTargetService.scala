@@ -27,18 +27,12 @@ import scala.util.{Failure, Success, Try}
   /**
     * Unsubscribe this subscriber from all current and future subscriber lists.
     */
-  def unsubscribeFromAllLists(email: String): ApiResponse[Unit] = {
-    val adminStatusUpdateF = EitherT(updateSubscriptionStatus(email, ETSubscriber.Status.UNSUBSCRIBED, etClientAdmin))
-    val editorialStatusUpdateF = EitherT(updateSubscriptionStatus(email, ETSubscriber.Status.UNSUBSCRIBED, etClientEditorial))
-
-    (for {
-      _ <- adminStatusUpdateF
-      _ <- editorialStatusUpdateF
-    } yield {}).run
-  }
+  def unsubscribeFromAllLists(email: String): ApiResponse[Unit] =
+    EitherT(updateSubscriptionStatus(email, ETSubscriber.Status.UNSUBSCRIBED, etClientEditorial)).run
 
   /**
     * Activates subscriber in both Admin and Editorial business units.
+    * We activate in Admin to be safe because we used to unsubscribe there too.
     */
   def activateEmailSubscription(email: String): ApiResponse[Unit] = {
     val adminStatusUpdateF = EitherT(updateSubscriptionStatus(email, ETSubscriber.Status.ACTIVE, etClientAdmin))

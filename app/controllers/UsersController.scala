@@ -112,14 +112,9 @@ import models.client.ApiError._
   }
 
   def unsubcribeFromAllEmailLists(email: String) = auth.async { request =>
-    logger.info("Unsubscribing from all email lists (marketing and editorial)")
-    val unsubscribeMarketingEmailsInIdentity = EitherT(exactTargetService.unsubscribeFromAllLists(email))
-    val unsubcribeAllEmailsInExactTarget = EitherT(userService.unsubscribeFromMarketingEmails(email))
+    logger.info("Unsubscribing from all editorial email lists ")
 
-    (for {
-      _ <- unsubscribeMarketingEmailsInIdentity
-      _ <- unsubcribeAllEmailsInExactTarget
-    } yield ()).fold(
+    EitherT(exactTargetService.unsubscribeFromAllLists(email)).fold(
       error => {
         logger.error(s"Failed to unsubscribe from all email lists: $error")
         InternalServerError(error)

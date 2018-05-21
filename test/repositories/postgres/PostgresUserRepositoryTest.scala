@@ -144,18 +144,6 @@ class PostgresUserRepositoryTest extends WordSpecLike
     }
   }
 
-  "PostgresUserRepository#unsubscribeFromMarketingEmails" should {
-    "Unsub from marketing mails" in new TestFixture {
-      whenReady(
-        repo.unsubscribeFromMarketingEmails("identitydev@guardian.co.uk")
-          .flatMap(_ => repo.findById("1234"))
-      ) {
-        case \/-(Some(updatedUser)) => updatedUser.status.receive3rdPartyMarketing shouldBe Some(false)
-        case _ => fail()
-      }
-    }
-  }
-
   "PostgresUserRepository#updateEmailValidationStatus" should {
     "Unsub from marketing mails" in new TestFixture {
       whenReady(

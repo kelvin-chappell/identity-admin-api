@@ -262,10 +262,6 @@ import scalaz.{-\/, EitherT, \/, \/-}
       _ <- EitherT(identityApiClient.sendEmailValidation(user.id))
     } yield()).run
 
-  def unsubscribeFromMarketingEmails(email: String): ApiResponse[Int] = {
-    postgresUsersReadRepository.unsubscribeFromMarketingEmails(email)
-  }
-
   def enrichUserWithProducts(user: GuardianUser): ApiResponse[GuardianUser]  = {
     val subscriptionF = EitherT(salesforceService.getSubscriptionByIdentityId(user.idapiUser.id))
     val membershipF = EitherT(salesforceService.getMembershipByIdentityId(user.idapiUser.id))
