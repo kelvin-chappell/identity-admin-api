@@ -4,6 +4,8 @@ import com.gu.identity.logging.KinesisAppenderConfig
 import play.api.{Configuration, Environment, Logger}
 import play.api.inject.{Binding, Module}
 
+import scala.util.control.NonFatal
+
 class LoggingModule extends Module {
 
   private val logger = Logger(this.getClass)
@@ -15,7 +17,7 @@ class LoggingModule extends Module {
     } catch {
       case e: com.typesafe.config.ConfigException =>
         logger.error("Kinesis logging stream name not present in configuration", e)
-      case e: Exception =>
+      case NonFatal(e) =>
         logger.error("Kinesis logging stream not correctly configured", e)
     }
     Nil
