@@ -173,6 +173,11 @@ Resources:
           - Effect: Allow
             Action: ses:SendEmail
             Resource: '*'
+          - Effect: Allow
+            Action:
+            - kinesis:Describe*
+            - kinesis:Put*
+            Resource: '*'
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:

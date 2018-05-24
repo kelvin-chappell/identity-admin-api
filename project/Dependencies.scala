@@ -2,6 +2,8 @@ import sbt._
 import play.sbt.PlayImport
 
 object Dependencies {
+  val awsSdkVersion = "1.11.293"
+
   val value = Seq(
     PlayImport.guice,
     PlayImport.jodaForms,
@@ -25,6 +27,12 @@ object Dependencies {
     "ai.x"                        %%  "diff"                  % "1.2.0",
     "org.typelevel"               %%  "cats-core"             % "0.9.0",
     "org.postgresql"              %   "postgresql"            % "42.1.4",
+
+    "com.gu"                      %   "kinesis-logback-appender" % "1.4.2",
+    "com.amazonaws"               %   "aws-java-sdk"             % awsSdkVersion,
+    "com.amazonaws"               %   "aws-java-sdk-ec2"         % awsSdkVersion,
+    "net.logstash.logback"        %   "logstash-logback-encoder" % "4.11",
+
 
     "ru.yandex.qatools.embed"     %   "postgresql-embedded"   % "2.4"             % "test",
     "org.scalatest"               %%  "scalatest"             % "3.0.5"           % "test",
