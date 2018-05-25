@@ -11,8 +11,6 @@ case class UserUpdateRequest(
   location: Option[String] = None,
   aboutMe: Option[String] = None,
   interests: Option[String] = None,
-  receiveGnmMarketing: Option[Boolean] = None,
-  receive3rdPartyMarketing: Option[Boolean] = None,
   hasRepermissioned: Option[Boolean] = None,
   consents: List[Consent] = Nil,
   userEmailValidated: Option[Boolean] = None)
