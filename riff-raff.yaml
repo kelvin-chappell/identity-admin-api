@@ -20,3 +20,4 @@ deployments:
         AMI:
           Recipe: identity-base
           AmigoStage: PROD
+      amiEncrypted: true
