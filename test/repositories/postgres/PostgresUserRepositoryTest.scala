@@ -45,7 +45,7 @@ class PostgresUserRepositoryTest extends WordSpecLike
       dates = UserDates(
         lastActivityDate = new DateTime(42000l, DateTimeZone.UTC).some
       ).some,
-      statusFields = StatusFields(receive3rdPartyMarketing = true.some, userEmailValidated = false.some).some
+      statusFields = StatusFields().some
     )
     val userJson = Json.stringify(Json.toJson(testUser))
     execSql(

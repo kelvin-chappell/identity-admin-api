@@ -99,9 +99,7 @@ object UserDates {
   implicit val format = Json.format[UserDates]
 }
 
-case class StatusFields(receive3rdPartyMarketing: Option[Boolean] = None,
-                        receiveGnmMarketing: Option[Boolean] = None,
-                        userEmailValidated: Option[Boolean] = None,
+case class StatusFields(userEmailValidated: Option[Boolean] = None,
                         hasRepermissioned: Option[Boolean] = None)
 
 object StatusFields {
@@ -172,8 +170,6 @@ case class IdentityUser(
     )
 
     val statusFields = this.statusFields.getOrElse(StatusFields()).copy(
-      receive3rdPartyMarketing = userUpdateRequest.receive3rdPartyMarketing,
-      receiveGnmMarketing = userUpdateRequest.receiveGnmMarketing,
       userEmailValidated = userUpdateRequest.userEmailValidated,
       hasRepermissioned = userUpdateRequest.hasRepermissioned
     )

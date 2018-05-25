@@ -34,10 +34,9 @@ object Address {
   implicit val format = Json.format[Address]
 }
 
-case class UserStatus(receive3rdPartyMarketing: Option[Boolean] = None,
-                      receiveGnmMarketing: Option[Boolean] = None,
-                      userEmailValidated: Option[Boolean] = None,
-                      hasRepermissioned: Option[Boolean] = None)
+case class UserStatus(
+  userEmailValidated: Option[Boolean] = None,
+  hasRepermissioned: Option[Boolean] = None)
 
 object UserStatus {
   implicit val format = Json.format[UserStatus]
@@ -215,8 +214,6 @@ object User {
       registrationIp = user.privateFields.flatMap(_.registrationIp),
       registrationType = user.privateFields.flatMap(_.registrationType),
       status = UserStatus(
-        receive3rdPartyMarketing = user.statusFields.flatMap(_.receive3rdPartyMarketing),
-        receiveGnmMarketing = user.statusFields.flatMap(_.receiveGnmMarketing),
         userEmailValidated = user.statusFields.flatMap(_.userEmailValidated),
         hasRepermissioned = user.statusFields.flatMap(_.hasRepermissioned)
       ),
