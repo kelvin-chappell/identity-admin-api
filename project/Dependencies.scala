@@ -32,7 +32,6 @@ object Dependencies {
     "org.scalatestplus.play"      %%  "scalatestplus-play"    % "3.1.1"           % "test",
     "com.typesafe.akka"           %%  "akka-slf4j"            % "2.5.4"           % "test",
     "com.typesafe.akka"           %%  "akka-testkit"          % "2.5.4"           % "test",
-    "com.typesafe.akka"           %%  "akka-agent"            % "2.5.6",
-  PlayImport.specs2                                                             % "test"
+    PlayImport.specs2                                                             % "test"
   )
 }

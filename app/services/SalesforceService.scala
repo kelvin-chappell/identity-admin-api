@@ -1,7 +1,9 @@
 package services
 
-import javax.inject.{Inject, Singleton}
+import java.util.concurrent.TimeUnit
 
+import akka.NotUsed
+import javax.inject.{Inject, Singleton}
 import com.gu.identity.util.Logging
 import configuration.Config.TouchpointSalesforce._
 import models.client._
@@ -14,7 +16,7 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import scalaz.{-\/, \/-}
 import akka.actor.ActorSystem
-import akka.agent.Agent
+import com.google.common.cache.{CacheBuilder, CacheLoader}
 
 case class SalesforceError(msg: String) extends Exception(msg)
 
@@ -41,41 +43,34 @@ case class SubscriptionId(value: String, fieldName: String = "Subscription_Name_
 
 @Singleton class SalesforceService @Inject() (ws: WSClient, actorSystem: ActorSystem)(implicit ec: ExecutionContext) extends Logging {
 
-  val eventualAuthentication: Promise[Agent[SFAuthentication]] = Promise()
-  startAuth()
+  val cacheLoader = new CacheLoader[NotUsed, SFAuthentication] {
+   override def load(k: NotUsed) : SFAuthentication = {
+      logger.info("Authenticating with Salesforce...")
+      val authEndpoint = s"$apiUrl/services/oauth2/token"
 
-  def sfAuth: Future[SFAuthentication] = {
-    logger.info("Authenticating with Salesforce...")
-    val authEndpoint = s"$apiUrl/services/oauth2/token"
-
-    val param = Map(
-      "client_id" -> consumerKey,
-      "client_secret" -> consumerSecret,
-      "username" -> apiUsername,
-      "password" -> (apiPassword + apiToken),
-      "grant_type" -> "password"
-    ).map { case (k, v) => s"$k=$v" }.mkString("&")
+      val param = Map(
+        "client_id" -> consumerKey,
+        "client_secret" -> consumerSecret,
+        "username" -> apiUsername,
+        "password" -> (apiPassword + apiToken),
+        "grant_type" -> "password"
+      ).map { case (k, v) => s"$k=$v" }.mkString("&")
       val request = ws.url(s"$authEndpoint?$param")
       val response = Try(Await.result(request.post(""), 10.second))
-
       response match {
         case Success(res) =>
-          if (res.status == OK) Future.successful(Json.parse(res.body).as[SFAuthentication])
+          if (res.status == OK) Json.parse(res.body).as[SFAuthentication]
           else throw SalesforceError(s"Authentication failure: ${res.body.toString}")
         case Failure(e) => throw SalesforceError(s"${e.getMessage}")
       }
+    }
   }
 
-  // 15min -> 96 request/day. Failed auth will not override previous access_token.
-  private def startAuth() = actorSystem.scheduler.schedule(0.seconds, 15.minutes)(sfAuth.onComplete {
-    case Success(auth) =>
-      if (eventualAuthentication.isCompleted)
-        eventualAuthentication.future.map(_.send(auth))
-      else
-        eventualAuthentication.complete(Success(Agent(auth)))
-    case Failure(ex) => SalesforceError(s"Cannot authenticate salesforce token")
-  })
-
+  val sfAuthCache = CacheBuilder.newBuilder()
+    .maximumSize(1)
+    .expireAfterWrite(15, TimeUnit.MINUTES)
+    .build(cacheLoader)
+  
   private def extractSubscription(res: WSResponse): SalesforceSubscription = {
     val records: JsArray = (res.json \ "records").as[JsArray]
 
@@ -94,25 +89,23 @@ case class SubscriptionId(value: String, fieldName: String = "Subscription_Name_
   }
 
   private def querySalesforce(soql: String): ApiResponse[Option[SalesforceSubscription]] =
-    eventualAuthentication.future.map { authAgent =>
-      val auth = authAgent()
-      val authHeader = ("Authorization", s"Bearer ${auth.access_token}")
-      ws.url(s"${auth.instance_url}/services/data/v29.0/query?q=$soql").addHttpHeaders(authHeader).get().map { response =>
-        if (response.status == OK) {
-          if ((response.json \ "totalSize").as[Int] > 0)
-            \/-(Some(extractSubscription(response)))
-          else
-            \/-(None)
-        }
-        else {
-          val title = "Could not get subscriptions from Salesforce"
-          val details = response.body
-          logger.error(s"$title: $details")
-          -\/(ApiError(title, details))
-        }
-      }.recover { case error => -\/(ApiError("Failed to communicate with Salesforce", error.getMessage)) }
-    }.flatMap(identity)
-
+    ws.url(s"${sfAuthCache.get(NotUsed).instance_url}/services/data/v29.0/query?q=$soql")
+      .addHttpHeaders(("Authorization", s"Bearer ${sfAuthCache.get(NotUsed).access_token}"))
+      .get()
+      .map { response =>
+      if (response.status == OK) {
+        if ((response.json \ "totalSize").as[Int] > 0)
+          \/-(Some(extractSubscription(response)))
+        else
+          \/-(None)
+      }
+      else {
+        val title = "Could not get subscriptions from Salesforce"
+        val details = response.body
+        logger.error(s"$title: $details")
+        -\/(ApiError(title, details))
+      }
+    }.recover { case error => -\/(ApiError("Failed to communicate with Salesforce", error.getMessage)) }
 
   private val selectQuerySectionDeliveryAddress: String =
     """
