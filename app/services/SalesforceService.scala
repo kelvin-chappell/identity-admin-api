@@ -1,7 +1,9 @@
 package services
 
-import javax.inject.{Inject, Singleton}
+import java.util.concurrent.TimeUnit
 
+import akka.NotUsed
+import javax.inject.{Inject, Singleton}
 import com.gu.identity.util.Logging
 import configuration.Config.TouchpointSalesforce._
 import models.client._
@@ -9,10 +11,12 @@ import play.api.libs.json.{JsArray, Json}
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.http.Status.OK
 
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import scalaz.{-\/, \/-}
+import akka.actor.ActorSystem
+import com.google.common.cache.{CacheBuilder, CacheLoader}
 
 case class SalesforceError(msg: String) extends Exception(msg)
 
@@ -37,34 +41,36 @@ case class IdentityId(value: String, fieldName: String = "Zuora__Subscription__r
 case class Email(value: String, fieldName: String = "Zuora__Subscription__r.Zuora__CustomerAccount__r.Contact__r.Email") extends UniqueIdentifier
 case class SubscriptionId(value: String, fieldName: String = "Subscription_Name__c") extends UniqueIdentifier
 
-@Singleton class SalesforceService @Inject() (ws: WSClient)(implicit ec: ExecutionContext) extends Logging {
+@Singleton class SalesforceService @Inject() (ws: WSClient, actorSystem: ActorSystem)(implicit ec: ExecutionContext) extends Logging {
 
-  private lazy val sfAuth: SFAuthentication = {
-    logger.info("Authenticating with Salesforce...")
-    val authEndpoint = s"$apiUrl/services/oauth2/token"
+  val cacheLoader = new CacheLoader[NotUsed, SFAuthentication] {
+   override def load(k: NotUsed) : SFAuthentication = {
+      logger.info("Authenticating with Salesforce...")
+      val authEndpoint = s"$apiUrl/services/oauth2/token"
 
-    val param = Map(
-      "client_id" -> consumerKey,
-      "client_secret" -> consumerSecret,
-      "username" -> apiUsername,
-      "password" -> (apiPassword + apiToken),
-      "grant_type" -> "password"
-    ).map { case (k, v) => s"$k=$v" }.mkString("&")
-
-    val request = ws.url(s"$authEndpoint?$param")
-
-    val response = Try(Await.result(request.post(""), 10.second))
-
-    response match {
-      case Success(res) =>
-        if (res.status == OK) Json.parse(res.body).as[SFAuthentication]
-        else throw SalesforceError(s"Authentication failure: ${res.body.toString}")
-      case Failure(e) => throw SalesforceError(s"${e.getMessage}")
+      val param = Map(
+        "client_id" -> consumerKey,
+        "client_secret" -> consumerSecret,
+        "username" -> apiUsername,
+        "password" -> (apiPassword + apiToken),
+        "grant_type" -> "password"
+      ).map { case (k, v) => s"$k=$v" }.mkString("&")
+      val request = ws.url(s"$authEndpoint?$param")
+      val response = Try(Await.result(request.post(""), 10.second))
+      response match {
+        case Success(res) =>
+          if (res.status == OK) Json.parse(res.body).as[SFAuthentication]
+          else throw SalesforceError(s"Authentication failure: ${res.body.toString}")
+        case Failure(e) => throw SalesforceError(s"${e.getMessage}")
+      }
     }
   }
 
-  private val authHeader = ("Authorization", s"Bearer ${sfAuth.access_token}")
-
+  val sfAuthCache = CacheBuilder.newBuilder()
+    .maximumSize(1)
+    .expireAfterWrite(15, TimeUnit.MINUTES)
+    .build(cacheLoader)
+  
   private def extractSubscription(res: WSResponse): SalesforceSubscription = {
     val records: JsArray = (res.json \ "records").as[JsArray]
 
@@ -83,7 +89,10 @@ case class SubscriptionId(value: String, fieldName: String = "Subscription_Name_
   }
 
   private def querySalesforce(soql: String): ApiResponse[Option[SalesforceSubscription]] =
-    ws.url(s"${sfAuth.instance_url}/services/data/v29.0/query?q=$soql").addHttpHeaders(authHeader).get().map { response =>
+    ws.url(s"${sfAuthCache.get(NotUsed).instance_url}/services/data/v29.0/query?q=$soql")
+      .addHttpHeaders(("Authorization", s"Bearer ${sfAuthCache.get(NotUsed).access_token}"))
+      .get()
+      .map { response =>
       if (response.status == OK) {
         if ((response.json \ "totalSize").as[Int] > 0)
           \/-(Some(extractSubscription(response)))
