@@ -334,7 +334,6 @@ Resources:
                 stdin { }
                 file {
                     add_field => {
-                        'application' => '${App}'
                         'app' => '${App}'
                         'stage' => '${Stage}'
                         'stack' => '${Stack}'
@@ -346,7 +345,6 @@ Resources:
                 }
                 file {
                     add_field => {
-                        'application' => '${App}'
                         'app' => '${App}'
                         'stage' => '${Stage}'
                         'stack' => '${Stack}'
