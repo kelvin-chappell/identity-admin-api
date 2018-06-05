@@ -79,6 +79,9 @@ Parameters:
   AlarmEmailAddress:
     Description: Contact email for alarms
     Type: String
+  KinesisStream:
+    Description: Kinesis Stream for logging
+    Type: String
   Stack:
     Description: Application stack
     Type: String
@@ -332,6 +335,7 @@ Resources:
                     add_field => {
                         'application' => '${App}'
                         'stage' => '${Stage}'
+                        'stack' => '${Stack}'
                         'ec2_instance' => '$instanceid'
                     }
                     path => "/${App}/logs/${App}-app.log"
@@ -342,6 +346,7 @@ Resources:
                     add_field => {
                         'application' => '${App}'
                         'stage' => '${Stage}'
+                        'stack' => '${Stack}'
                         'ec2_instance' => '$instanceid'
                     }
                     path => "/${App}/logs/${App}-access.log"
@@ -356,6 +361,12 @@ Resources:
                     port => 6379
                     codec => json_lines
                 }
+            }
+            output {
+              kinesis {
+                stream_name => "${KinesisStream}"
+                region => "eu-west-1"
+              }
             }
             filter {
                 multiline {
