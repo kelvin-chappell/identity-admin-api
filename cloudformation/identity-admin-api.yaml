@@ -185,7 +185,8 @@ Resources:
             Action:
             - kinesis:Describe*
             - kinesis:Put*
-            Resource: '*'
+            Resource:
+            - arn:aws:kinesis:eu-west-1:942464564246:stream/identity-logging-PROD-KinesisStream-G0Y2BTGKK20H
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
