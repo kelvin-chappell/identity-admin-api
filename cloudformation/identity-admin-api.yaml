@@ -335,6 +335,7 @@ Resources:
                 file {
                     add_field => {
                         'application' => '${App}'
+                        'app' => '${App}'
                         'stage' => '${Stage}'
                         'stack' => '${Stack}'
                         'ec2_instance' => '$instanceid'
@@ -346,6 +347,7 @@ Resources:
                 file {
                     add_field => {
                         'application' => '${App}'
+                        'app' => '${App}'
                         'stage' => '${Stage}'
                         'stack' => '${Stack}'
                         'ec2_instance' => '$instanceid'
