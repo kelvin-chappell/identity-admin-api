@@ -152,10 +152,6 @@ Resources:
             Resource:
             - !Sub arn:aws:s3:::identity-artifacts/${Stage}/${App}/*
             - !Sub arn:aws:s3:::identity-private-config/${Stage}/${App}/*
-            - arn:aws:s3:::github-public-keys/*
-          - Effect: Allow
-            Action: s3:ListBucket
-            Resource: arn:aws:s3:::github-public-keys
           - Effect: Allow
             Action: ec2:Describe*
             Resource: '*'
