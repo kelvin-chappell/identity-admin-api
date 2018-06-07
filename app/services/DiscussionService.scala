@@ -33,7 +33,10 @@ object DiscussionStats {
           discussionStats => \/-(discussionStats.comments > 0)
         )
       }
-    }.recover { case error => -\/(ApiError("Failed to communicate with DAPI", error.getMessage)) }
+    }.recover { case error =>
+      logger.error("Failed to communicate with DAPI", error.getMessage)
+      -\/(ApiError("Failed to communicate with DAPI", error.getMessage))
+    }
   }
 }
 
