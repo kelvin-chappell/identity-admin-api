@@ -15,7 +15,6 @@ object Dependencies {
     "com.gu.identity"             %%  "identity-play-auth"    % "1.2",
     "com.gu"                      %%  "tip"                   % "0.3.2",
     "uk.gov.hmrc"                 %%  "emailaddress"          % "2.1.0",
-    "com.github.dwhjames"         %%  "aws-wrap"              % "0.8.0",
     "org.scalaz"                  %%  "scalaz-core"           % "7.2.10",
     "com.exacttarget"             %   "fuelsdk"               % "1.1.0",
     "com.amazonaws"               %   "aws-java-sdk"          % "1.11.105",
