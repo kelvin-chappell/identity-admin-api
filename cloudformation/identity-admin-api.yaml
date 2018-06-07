@@ -70,9 +70,6 @@ Parameters:
   PrivateVpcSubnets:
     Description: Private subnets to use in VPC
     Type: List<AWS::EC2::Subnet::Id>
-  LogstashHost:
-    Description: Logstash load balancer host
-    Type: String
   AMI:
     Description: Custom AMI to use for instances, created Amigo
     Type: String
@@ -257,9 +254,6 @@ Resources:
       - Key: Stage
         Value: !Ref 'Stage'
         PropagateAtLaunch: 'true'
-      - Key: LogstashHost
-        Value: !Ref 'LogstashHost'
-        PropagateAtLaunch: 'true'
       - Key: Name
         Value: !Join [':', [!Ref 'Stage', !Ref 'App']]
         PropagateAtLaunch: 'true'
@@ -353,14 +347,6 @@ Resources:
                     path => "/${App}/logs/${App}-access.log"
                     type => "access"
                     start_position => "beginning"
-                }
-            }
-            output {
-                stdout { }
-                tcp {
-                    host => "${LogstashHost}"
-                    port => 6379
-                    codec => json_lines
                 }
             }
             output {
