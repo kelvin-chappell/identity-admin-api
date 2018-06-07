@@ -4,8 +4,6 @@ import javax.inject.{Inject, Singleton}
 
 import actors.EventPublishingActor.{DisplayNameChanged, EmailValidationChanged}
 import actors.EventPublishingActorProvider
-import ai.x.diff._
-import ai.x.diff.conversions._
 import akka.actor.ActorSystem
 import com.gu.identity.util.Logging
 import configuration.Config.PublishEvents.eventsEnabled
@@ -13,13 +11,12 @@ import models.{client, _}
 import models.client._
 import models.database.mongo._
 import models.database.postgres.{PostgresDeletedUserRepository, PostgresReservedUsernameRepository, PostgresUserRepository}
-import org.joda.time.DateTime
 import uk.gov.hmrc.emailaddress.EmailAddress
 import util.UserConverter._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.std.scalaFuture._
-import scalaz.{-\/, EitherT, \/, \/-}
+import scalaz.{-\/, EitherT, \/-}
 
 @Singleton class UserService @Inject()(
     identityApiClient: IdentityApiClient,
