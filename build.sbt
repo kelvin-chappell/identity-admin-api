@@ -3,7 +3,7 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala, BuildInfoPlugin,
 name := "identity-admin-api"
 organization := "com.gu"
 version := "1.0-SNAPSHOT"
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.6"
 
 sources in (Compile,doc) := Seq.empty
 publishArtifact in (Compile, packageDoc) := false

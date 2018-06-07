@@ -18,7 +18,6 @@ import play.api.test.Helpers._
 import services.{DiscussionService, ExactTargetService, SalesforceService, UserService}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.ExecutionContext.Implicits.global
 import scalaz.{-\/, \/-}
 
 class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with GuiceOneServerPerSuite {
