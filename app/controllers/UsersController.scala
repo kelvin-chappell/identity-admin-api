@@ -61,6 +61,7 @@ import models.client.ApiError._
   }
 
   def findById(id: String) = (auth andThen identityUserAction(id)) { request =>
+    exactTargetService.transferSubscriptionsToNewSubscriber()
     Ok(request.user)
   }
 

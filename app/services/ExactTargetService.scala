@@ -1,7 +1,10 @@
 package services
 
 import akka.actor.ActorSystem
+import com.exacttarget.fuelsdk.ETSubscriber.Status
 import com.exacttarget.fuelsdk._
+import com.exacttarget.fuelsdk.internal.Options.SaveOptions
+import com.exacttarget.fuelsdk.internal.{CreateOptions, CreateRequest, SaveAction, SaveOption, Subscriber, SubscriberList, SubscriberStatus}
 import com.gu.identity.util.Logging
 import configuration.Config
 import javax.inject.{Inject, Singleton}
@@ -250,6 +253,7 @@ import scala.util.{Failure, Success, Try}
       subscriber.setEmailAddress(email)
       subscriber.setKey(email)
       subscriber.setStatus(status)
+      subscriber.getSubscriptions
       createSubscriber(subscriber)
     }
 
@@ -340,6 +344,78 @@ import scala.util.{Failure, Success, Try}
       logger.error(s"$title: ${etResponse.getResponseMessage}")
       -\/(ApiError(title, etResponse.getResponseMessage))
     }
+
+//  private def subscribe() = {
+//    val subscriberList = new SubscriberList
+//    subscriberList.setList()
+//
+//  }
+
+//  def transferSubscriptionsToNewSubscriber(
+//    email: String = "hHb3jQR8bsb734g4zPc".toLowerCase + "@gu.com",
+//    listIds: List[String] = List("4151", "4156")
+//  ) = {
+//    println(s"wooowjohohooh $email")
+//
+//    val subscriber = new ETSubscriber
+//    subscriber.setEmailAddress(email)
+//    subscriber.setKey(email)
+//    subscriber.setPreferredEmailType(ETEmail.Type.HTML)
+//
+//    listIds.foreach { listId =>
+//      val subscription = new subscriber.Subscription()
+//      subscription.setListId(listId)
+//      subscription.setStatus(Status.ACTIVE)
+//      println(subscriber.getSubscriptions)
+//      subscriber.getSubscriptions.add(subscription)
+//    }
+//
+//    println(subscriber)
+//
+//    val etResponse = etClientEditorial.create(subscriber)
+//    handleETResponse(etResponse, s"Failed to transfer email subscriptions to $email")
+//  }
+
+
+  def transferSubscriptionsToNewSubscriber(
+    email: String = "hHb3jQR8bsb734g4zPc".toLowerCase + "@gu.com",
+    listIds: List[String] = List("4151", "4156")
+  ) = {
+
+    println(email)
+    val soapClient = etClientEditorial.getSoapConnection.getSoap
+
+    val subscriber = new Subscriber
+    subscriber.setSubscriberKey(email)
+    subscriber.setEmailAddress(email)
+
+    listIds.foreach { listId =>
+      val subscriberList = new SubscriberList
+      subscriberList.setId(listId.toInt)
+      subscriberList.setStatus(SubscriberStatus.ACTIVE)
+//      subscriberList.setAction("create")
+
+      subscriber.getLists().add(subscriberList)
+    }
+
+
+    val createOptions = new CreateOptions
+    val saveOption = new SaveOption
+    saveOption.setPropertyName("*")
+    saveOption.setSaveAction(SaveAction.UPDATE_ADD)
+    val saveOptions = new SaveOptions
+    saveOptions.getSaveOption.add(saveOption)
+    createOptions.setSaveOptions(saveOptions)
+
+    val createRequest = new CreateRequest
+    createRequest.getObjects.add(subscriber)
+    createRequest.setOptions(createOptions)
+
+
+    val response = soapClient.create(createRequest)
+    println(response)
+    response
+  }
 
   private lazy val etClientAdmin = {
     val etConf = new ETConfiguration()
