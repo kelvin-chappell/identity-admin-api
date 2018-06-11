@@ -1,7 +1,6 @@
 package services
 
 import akka.actor.ActorSystem
-import com.exacttarget.fuelsdk.ETSubscriber.Status
 import com.exacttarget.fuelsdk._
 import com.exacttarget.fuelsdk.internal.Options.SaveOptions
 import com.exacttarget.fuelsdk.internal.{CreateOptions, CreateRequest, CreateResponse, SaveAction, SaveOption, Subscriber, SubscriberList, SubscriberStatus}
@@ -12,11 +11,8 @@ import models.client._
 import models.database.postgres.PostgresUserRepository
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-
-import scala.concurrent.{ExecutionContext, Future}
 import scalaz.std.scalaFuture._
 import scalaz.{-\/, EitherT, OptionT, \/, \/-}
-
 import scala.collection.JavaConversions._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -47,27 +43,23 @@ import scala.util.{Failure, Success, Try}
     } yield {}).run
   }
 
-//  def updateEmailAddress(oldEmail: String, newEmail: String): ApiResponse[Unit] =
-//    EitherT(retrieveSubscriber(oldEmail, etClientAdmin)).flatMap {
-//      case Some(subscriber) =>
-//        subscriber.setEmailAddress(newEmail)
-//        EitherT(updateSubscriber(subscriber, etClientAdmin))
-//
-//      case None => EitherT.right(Future.successful({}))
-//    }.run
-
-  def updateEmailAddress(oldEmail: String, newEmail: String): ApiResponse[_] = {
+  // FIXME: Mimics IDAPI behaviour where it creates a new subscriber instead of just updating email on existing one
+  def updateEmailAddress(oldEmail: String, newEmail: String): ApiResponse[_] =
     (for {
-      subscriber <- OptionT(EitherT(retrieveSubscriber(oldEmail, etClientAdmin)))
       subscriptions <- OptionT(EitherT(newslettersSubscriptionByEmail(oldEmail)))
     } yield {
-      subscriptions.list
-      transferSubscriptionsToNewSubscriber(newEmail, subscriptions.list)
-      unsubscribeFromAllLists(oldEmail)
-      Future(Right({}))
+      transferSubscriptions(oldEmail, newEmail, subscriptions.list)
     }).run.run
-  }
 
+  private def transferSubscriptions(
+      oldEmail: String,
+      newEmail: String,
+      subscriptions: List[String]
+  ): ApiResponse[_] =
+    (for {
+      _ <- EitherT(transferSubscriptionsToNewSubscriber(newEmail, subscriptions))
+      _ <- EitherT(unsubscribeFromAllLists(oldEmail))
+    } yield {}).run
 
   def newslettersSubscriptionByIdentityId(identityId: String): ApiResponse[Option[NewslettersSubscription]] = {
 
@@ -265,7 +257,6 @@ import scala.util.{Failure, Success, Try}
       subscriber.setEmailAddress(email)
       subscriber.setKey(email)
       subscriber.setStatus(status)
-      subscriber.getSubscriptions
       createSubscriber(subscriber)
     }
 
@@ -364,7 +355,6 @@ import scala.util.{Failure, Success, Try}
     if (etResponse.getOverallStatus == "OK")
       \/-{}
     else {
-      // OnListAlready 13006
       val message = etResponse.getResults.head.getStatusMessage
       val code = etResponse.getResults.head.getErrorCode
       logger.error(s"$title: $code $message")
@@ -372,10 +362,9 @@ import scala.util.{Failure, Success, Try}
     }
 
   def transferSubscriptionsToNewSubscriber(
-      email: String = "hHb3jQR8bsb734g4zPc".toLowerCase + "@gu.com",
-      listIds: List[String] = List("4151", "4156")
+      email: String,
+      listIds: List[String]
   ): ApiResponse[Unit] = Future {
-    println(email)
     val soapClient = etClientEditorial.getSoapConnection.getSoap
 
     val subscriber = new Subscriber
@@ -386,11 +375,8 @@ import scala.util.{Failure, Success, Try}
       val subscriberList = new SubscriberList
       subscriberList.setId(listId.toInt)
       subscriberList.setStatus(SubscriberStatus.ACTIVE)
-//      subscriberList.setAction("create")
-
       subscriber.getLists().add(subscriberList)
     }
-
 
     val createOptions = new CreateOptions
     val saveOption = new SaveOption
@@ -407,12 +393,6 @@ import scala.util.{Failure, Success, Try}
 
     val response = soapClient.create(createRequest)
     handleCreateResponse(response, "Failed to transfer subscriptions")
-//    println(response)
-//    println(response.getOverallStatus)
-//    println(response.getResults.head.getStatusMessage)
-//    println(response.getResults.head.getErrorCode)
-//
-//    response
   }
 
   private lazy val etClientAdmin = {

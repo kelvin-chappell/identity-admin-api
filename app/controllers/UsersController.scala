@@ -61,9 +61,6 @@ import models.client.ApiError._
   }
 
   def findById(id: String) = (auth andThen identityUserAction(id)) { request =>
-//    exactTargetService.transferSubscriptionsToNewSubscriber()
-    exactTargetService.updateEmailAddress(
-      "mario.galic@guardian.co.uk", "hHb3jQR8bsb734g4zPc@gu.com")
     Ok(request.user)
   }
 
