@@ -2,6 +2,8 @@ package services
 
 import akka.actor.ActorSystem
 import com.exacttarget.fuelsdk._
+import com.exacttarget.fuelsdk.internal.Options.SaveOptions
+import com.exacttarget.fuelsdk.internal.{CreateOptions, CreateRequest, CreateResponse, SaveAction, SaveOption, Subscriber, SubscriberList, SubscriberStatus}
 import com.gu.identity.util.Logging
 import configuration.Config
 import javax.inject.{Inject, Singleton}
@@ -9,11 +11,8 @@ import models.client._
 import models.database.postgres.PostgresUserRepository
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-
-import scala.concurrent.{ExecutionContext, Future}
 import scalaz.std.scalaFuture._
-import scalaz.{-\/, EitherT, \/, \/-}
-
+import scalaz.{-\/, EitherT, OptionT, \/, \/-}
 import scala.collection.JavaConversions._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -44,15 +43,23 @@ import scala.util.{Failure, Success, Try}
     } yield {}).run
   }
 
-  def updateEmailAddress(oldEmail: String, newEmail: String): ApiResponse[Unit] =
-    EitherT(retrieveSubscriber(oldEmail, etClientAdmin)).flatMap {
-      case Some(subscriber) =>
-        subscriber.setEmailAddress(newEmail)
-        EitherT(updateSubscriber(subscriber, etClientAdmin))
+  // FIXME: Mimics IDAPI behaviour where it creates a new subscriber instead of just updating email on existing one
+  def updateEmailAddress(oldEmail: String, newEmail: String): ApiResponse[_] =
+    (for {
+      subscriptions <- OptionT(EitherT(newslettersSubscriptionByEmail(oldEmail)))
+    } yield {
+      transferSubscriptions(oldEmail, newEmail, subscriptions.list)
+    }).run.run
 
-      case None => EitherT.right(Future.successful({}))
-    }.run
-
+  private def transferSubscriptions(
+      oldEmail: String,
+      newEmail: String,
+      subscriptions: List[String]
+  ): ApiResponse[_] =
+    (for {
+      _ <- EitherT(transferSubscriptionsToNewSubscriber(newEmail, subscriptions))
+      _ <- EitherT(unsubscribeFromAllLists(oldEmail))
+    } yield {}).run
 
   def newslettersSubscriptionByIdentityId(identityId: String): ApiResponse[Option[NewslettersSubscription]] = {
 
@@ -340,6 +347,53 @@ import scala.util.{Failure, Success, Try}
       logger.error(s"$title: ${etResponse.getResponseMessage}")
       -\/(ApiError(title, etResponse.getResponseMessage))
     }
+
+  private def handleCreateResponse(
+      etResponse: CreateResponse,
+      title: String
+  ): ApiError \/ Unit =
+    if (etResponse.getOverallStatus == "OK")
+      \/-{}
+    else {
+      val message = etResponse.getResults.head.getStatusMessage
+      val code = etResponse.getResults.head.getErrorCode
+      logger.error(s"$title: $code $message")
+      -\/(ApiError(title, s"$title: $code $message"))
+    }
+
+  def transferSubscriptionsToNewSubscriber(
+      email: String,
+      listIds: List[String]
+  ): ApiResponse[Unit] = Future {
+    val soapClient = etClientEditorial.getSoapConnection.getSoap
+
+    val subscriber = new Subscriber
+    subscriber.setSubscriberKey(email)
+    subscriber.setEmailAddress(email)
+
+    listIds.foreach { listId =>
+      val subscriberList = new SubscriberList
+      subscriberList.setId(listId.toInt)
+      subscriberList.setStatus(SubscriberStatus.ACTIVE)
+      subscriber.getLists().add(subscriberList)
+    }
+
+    val createOptions = new CreateOptions
+    val saveOption = new SaveOption
+    saveOption.setPropertyName("*")
+    saveOption.setSaveAction(SaveAction.UPDATE_ADD)
+    val saveOptions = new SaveOptions
+    saveOptions.getSaveOption.add(saveOption)
+    createOptions.setSaveOptions(saveOptions)
+
+    val createRequest = new CreateRequest
+    createRequest.getObjects.add(subscriber)
+    createRequest.setOptions(createOptions)
+
+
+    val response = soapClient.create(createRequest)
+    handleCreateResponse(response, "Failed to transfer subscriptions")
+  }
 
   private lazy val etClientAdmin = {
     val etConf = new ETConfiguration()
