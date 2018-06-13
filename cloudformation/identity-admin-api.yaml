@@ -328,9 +328,9 @@ Resources:
                         'stage' => '${Stage}'
                         'stack' => '${Stack}'
                         'ec2_instance' => '$instanceid'
+                        'type' => 'app'
                     }
                     path => "/${App}/logs/${App}-app.log"
-                    type => "app"
                     start_position => "beginning"
                 }
                 file {
@@ -339,9 +339,9 @@ Resources:
                         'stage' => '${Stage}'
                         'stack' => '${Stack}'
                         'ec2_instance' => '$instanceid'
+                        'type' => 'access'
                     }
                     path => "/${App}/logs/${App}-access.log"
-                    type => "access"
                     start_position => "beginning"
                 }
             }
@@ -356,16 +356,18 @@ Resources:
                     type => "app"
                     pattern => "^\s"
                     what => "previous"
-                  }
-                grok {
-                    type => "app"
-                    match => { "message" => "%{TIMESTAMP_ISO8601:log_time_stamp} (?<thread>[^\s]+) %{LOGLEVEL:level} %{GREEDYDATA:message}" }
-                    overwrite => [ "message" ]
                 }
-                grok {
-                    type => "access"
-                    match => { "message" => "%{TIMESTAMP_ISO8601:log_time_stamp} %{WORD:method} %{URIPATH:request_path}(?:%{URIPARAM:request_param})? %{WORD} %{WORD} %{INT:request_duration:int} %{WORD}" }
-                  }
+                if [type] == "app" {
+                    grok {
+                        match => { "message" => "%{TIMESTAMP_ISO8601:log_time_stamp} (?<thread>[^\s]+) %{LOGLEVEL:level} %{GREEDYDATA:message}" }
+                        overwrite => [ "message" ]
+                    }
+                }
+                if [type] == "access" {
+                    grok {
+                        match => { "message" => "%{TIMESTAMP_ISO8601:log_time_stamp} %{WORD:method} %{URIPATH:request_path}(?:%{URIPARAM:request_param})? %{WORD} %{WORD} %{INT:request_duration:int} %{WORD}" }
+                      }
+                }
                 date {
                     match => [ "timestamp" , "yyyy-MM-dd HH:mm:ss,SSS" ]
                 }
