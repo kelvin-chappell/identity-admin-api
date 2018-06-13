@@ -18,6 +18,9 @@ import play.api.libs.json.Json
   implicit val format = Json.format[MadgexUser]
 
   def update(user: GNMMadgexUser): Future[Unit] = {
+    require(user.madgexUser.receive3rdPartyMarketing == false, "do not set old consents")
+    require(user.madgexUser.receiveGnmMarketing == false, "do not set old consents")
+
     val id = user.id
     requestSigner.sign(ws.url(s"${Config.Madgex.apiUrl}/updatessouser/$id"))
       .post(Json.toJson(user.madgexUser))
