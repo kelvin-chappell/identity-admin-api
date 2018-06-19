@@ -8,6 +8,7 @@ import models.database.mongo._
 import models.database.postgres.PostgresUserRepository
 import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.time.{Milliseconds, Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, DoNotDiscover, Matchers, WordSpecLike}
 import play.api.libs.json.Json
 import scalikejdbc._
@@ -30,6 +31,8 @@ class PostgresUserRepositoryTest extends WordSpecLike
     super.afterAll()
     actorSystem.terminate()
   }
+
+  override implicit val patienceConfig = PatienceConfig(Span(5, Seconds), Span(200, Milliseconds))
 
   trait TestFixture {
     val repo = new PostgresUserRepository(actorSystem, MetricsActorProviderStub)
@@ -63,13 +66,12 @@ class PostgresUserRepositoryTest extends WordSpecLike
       searchResponse.results should not be empty
     }
 
-    "find a user when their id address matches the query" in new TestFixture {
+    "find a user when their id matches the query" in new TestFixture {
       whenReady(repo.search("1234")) { result =>
         val \/-(searchResponse) = result
         searchResponse.total shouldBe 1
         searchResponse.results.head.id shouldBe "1234"
       }
-
     }
 
     "find a user when their email address matches the query" in new TestFixture {

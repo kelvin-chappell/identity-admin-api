@@ -7,12 +7,13 @@ import akka.actor.ActorSystem
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.scalalogging.LazyLogging
 import models.client.{ApiResponse, SearchResponse}
-import models.database.mongo.{DeletedUser, IdentityUser}
+import models.database.mongo.{DeletedUser, IdentityUser, PublicFields}
 import play.api.libs.json.{JsObject, JsString, Json}
 import scalikejdbc._
 
 import scala.concurrent.ExecutionContext
-import scalaz.\/-
+import scalaz.{-\/, \/-}
+import scalaz.syntax.std.option._
 
 @Singleton class PostgresDeletedUserRepository @Inject()(val actorSystem: ActorSystem,
                                                          val metricsActorProvider: MetricsActorProvider)
@@ -20,23 +21,20 @@ import scalaz.\/-
 
   implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
 
-  def findBy(query: String): ApiResponse[Option[DeletedUser]] = withMetricsFE("deletedUser.findBy", query) {
+  def findBy(query: String): ApiResponse[List[DeletedUser]] = withMetricsFE("deletedUser.findBy", query) {
     readOnly { implicit session =>
-      val _query = query.toLowerCase
-      val idMatcher = JsObject(Seq("_id" -> JsString(_query))).toString
+      val _query = query.toLowerCase.trim
       val usernameMatcher = JsObject(Seq("username" -> JsString(_query))).toString
       val emailMatcher = JsObject(Seq("email" -> JsString(_query))).toString
       val sqlQuery =
         sql"""
              | SELECT jdoc FROM reservedemails
-             | WHERE jdoc@>$idMatcher::jsonb
+             | WHERE id=${_query}
              | OR jdoc@>$emailMatcher::jsonb
              | OR jdoc@>$usernameMatcher::jsonb
              | order by jdoc->>'username'
        """.stripMargin
-      sqlQuery.map(_.string(1)).single.apply.map(
-        Json.parse(_).as[DeletedUser]
-      )
+      sqlQuery.map(_.string(1)).list().apply.map(Json.parse(_).as[DeletedUser])
     }(logFailure(s"Failed to find deleted users for query: $query"))
   }
 
@@ -52,9 +50,14 @@ import scalaz.\/-
   }
 
   def search(query: String): ApiResponse[SearchResponse] = findBy(query).map {
-    case \/-(Some(user)) =>
-      \/-(SearchResponse.create(1, 0, List(IdentityUser(user.email, user.id))))
-    case _ =>
+    case \/-(results) =>
+      val _results = results.map { u =>
+        val username = if (u.username.nonEmpty) u.username.some else None
+        IdentityUser(u.email, u.id, publicFields = PublicFields(username = username).some)
+      }
+      \/-(SearchResponse.create(_results.size, 0, _results))
+    case -\/(error) =>
+      logger.error("Failed to search for deleted users", error)
       \/-(SearchResponse.create(0, 0, Nil))
   }
 }

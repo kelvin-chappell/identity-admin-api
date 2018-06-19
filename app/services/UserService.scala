@@ -230,7 +230,7 @@ import scalaz.{-\/, EitherT, \/-}
 
     (for {
       activeUserOpt <- activeUserOptF
-      deletedUserOpt <- deletedUserOptF
+      deletedUserOpt <- deletedUserOptF.map(_.headOption)
     } yield {
       if (activeUserOpt.isDefined)
         activeUserOpt.map(idapiUser => GuardianUser(idapiUser = idapiUser))
