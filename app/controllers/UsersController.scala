@@ -60,6 +60,13 @@ import models.client.ApiError._
     userService.unreserveEmail(id).map(_ => NoContent)
   }
 
+  def blockEmail(id: String) = auth.async { request =>
+    userService.blockEmail(id) map {
+      case \/-(_) => NoContent
+      case -\/(error) => InternalServerError(error)
+    }
+  }
+
   def findById(id: String) = (auth andThen identityUserAction(id)) { request =>
     Ok(request.user)
   }

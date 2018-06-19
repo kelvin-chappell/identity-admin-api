@@ -153,6 +153,14 @@ import scalaz.{-\/, EitherT, \/-}
 
   def unreserveEmail(id: String) = postgresDeletedUserRepository.remove(id)
 
+  def blockEmail(id: String) = postgresDeletedUserRepository.setBlocklisted(id)
+
+  def enrichUserWithBannedStatus(user: GuardianUser): client.ApiResponse[GuardianUser] =
+    postgresDeletedUserRepository.isBlocklisted(user.idapiUser.id).map {
+      case \/-(status) => \/-(user.copy(blocklisted = status))
+      case -\/(_) => \/-(user)
+    }
+
   def searchOrphan(email: String): ApiResponse[SearchResponse] = {
     def isEmail(query: String) = query.matches("""^[a-zA-Z0-9\.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r.toString())
 

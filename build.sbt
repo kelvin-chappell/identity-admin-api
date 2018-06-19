@@ -55,5 +55,5 @@ riffRaffManifestProjectName := s"identity:${name.value}"
 // *****************************
 // Command aliases
 // *****************************
-addCommandAlias("devrun", "run -Dconfig.resource=DEV.conf 9500")
+addCommandAlias("devrun", s"run -Dconfig.resource=DEV.conf 9500")
 

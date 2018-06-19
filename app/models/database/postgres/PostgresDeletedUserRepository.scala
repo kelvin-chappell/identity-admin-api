@@ -60,4 +60,24 @@ import scalaz.syntax.std.option._
       logger.error("Failed to search for deleted users", error)
       \/-(SearchResponse.create(0, 0, Nil))
   }
+
+  def setBlocklisted(reservationId: String): ApiResponse[Int] = {
+    val sql =
+      sql"""
+        | UPDATE reservedemails SET permanent=TRUE WHERE id=$reservationId
+      """.stripMargin
+    localTx { implicit session =>
+      sql.update().apply()
+    }(logFailure(s"Failed to permanently reserve $reservationId"))
+  }
+
+  def isBlocklisted(reservationId: String): ApiResponse[Boolean] = {
+    val sql =
+      sql"""
+           | select count(*) from reservedemails WHERE id=$reservationId AND permanent=TRUE
+      """.stripMargin
+    localTx { implicit session =>
+      sql.map(_.int(1)).single().apply().getOrElse(0) > 0
+    }(logFailure(s"Failed to check reservation status $reservationId"))
+  }
 }

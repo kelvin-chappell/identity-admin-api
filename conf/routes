@@ -8,6 +8,7 @@ DELETE     /v1/user/:id                             @controllers.UsersController
 POST       /v1/user/:id/send-validation-email       @controllers.UsersController.sendEmailValidation(id: String)
 POST       /v1/user/:id/validate-email              @controllers.UsersController.validateEmail(id: String)
 POST       /v1/user/:id/unreserve-email             @controllers.UsersController.unreserveEmail(id: String)
+POST       /v1/user/:id/block-email                 @controllers.UsersController.blockEmail(id: String)
 POST       /v1/user/:email/unsubscribe-email        @controllers.UsersController.unsubcribeFromAllEmailLists(email: String)
 POST       /v1/user/:email/activate-email           @controllers.UsersController.activateEmailSubscriptions(email: String)
 

@@ -234,7 +234,9 @@ case class GuardianUser(
   hasCommented: Boolean = false,
   deleted: Boolean = false,
   orphan: Boolean = false,
-  contributions: List[Contribution] = Nil)
+  contributions: List[Contribution] = Nil,
+  blocklisted: Boolean = false
+)
 
 object GuardianUser {
   implicit val format = Json.format[GuardianUser]

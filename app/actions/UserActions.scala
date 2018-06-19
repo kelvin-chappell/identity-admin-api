@@ -35,12 +35,16 @@ class UserRequest[A](val user: GuardianUser, request: Request[A]) extends Wrappe
       def enrichUserWithProducts(user: GuardianUser): Future[Result \/ GuardianUser]  =
         EitherT(userService.enrichUserWithProducts(user)).leftMap(InternalServerError(_)).run
 
+      def addBanStatus(user: GuardianUser) =
+        EitherT(userService.enrichUserWithBannedStatus(user)).leftMap(InternalServerError(_)).run
+
       (for {
         user <- EitherT(findUserById(userId))
         userWithProducts <- EitherT(enrichUserWithProducts(user))
+        userWithBanStatus <- EitherT(addBanStatus(userWithProducts))
       } yield {
         if (Config.stage == "PROD") Tip.verify("User Retrieval")
-        new UserRequest(userWithProducts, request)
+        new UserRequest(userWithBanStatus, request)
       }).run.map(_.toEither)
 
     }
