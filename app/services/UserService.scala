@@ -250,7 +250,7 @@ import scalaz.{-\/, EitherT, \/-}
   def delete(user: GuardianUser): ApiResponse[ReservedUsernameList] = {
     val reserveUsernameResult = user.idapiUser.username.fold(postgresReservedUsernameRepository.loadReservedUsernames)(postgresReservedUsernameRepository.addReservedUsername)
     (for {
-      _ <- EitherT(postgresUsersReadRepository.delete(user.idapiUser))
+      _ <- EitherT(identityApiClient.deleteUserById(user.idapiUser.id))
       reservedUsernameList <- EitherT(reserveUsernameResult)
     } yield reservedUsernameList).run
   }

@@ -36,6 +36,18 @@ class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) 
     req.addHttpHeaders(ClientTokenHeaderName -> clientTokenHeaderValue)
   }
 
+  def deleteUserById(userId: String): ApiResponse[Unit] = {
+    val url = ws.url(s"$baseUrl/user/$userId")
+    addAuthHeaders(url).delete().map {
+      case response if response.status == 200 =>
+        \/-(())
+      case response =>
+        val errorResponse = Json.parse(response.body).as[IdentityApiErrorResponse]
+        val errorMessage = errorResponse.errors.headOption.map(x => x.message).getOrElse("Unknown error")
+        -\/(ApiError(s"Failed to delete user $userId", errorMessage))
+    }
+  }
+
   def sendEmailValidation(userId: String): ApiResponse[Unit] = {
     addAuthHeaders(ws.url(sendEmailValidationUrl(userId))).post("").map(
       response => 

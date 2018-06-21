@@ -85,18 +85,7 @@ class PostgresUserRepository @Inject()(val actorSystem: ActorSystem,
       ApiError(title, error.getMessage).left[User]
     }
   }
-
-  def delete(user: User): ApiResponse[Int] = withMetricsFE("user.delete", s"$user") {
-    val query = sql"delete from users where id=${user.id}"
-    localTx { implicit s =>
-      query.update().apply()
-    }(logFailure(s"Failed to delete user: ${user.id}"))
-  }.recover { case error =>
-    val title = s"Failed to delete user ${user.id}"
-    logger.error(title, error)
-    -\/(ApiError(title, error.getMessage))
-  }
-
+  
   def updateEmailValidationStatus(user: User, emailValidated: Boolean): ApiResponse[User] = withMetricsFE("user.updateEmailValidationStatus", s"$user $emailValidated") {
     val boolString = emailValidated.toString.toLowerCase
     val query = sql"update users set jdoc=jsonb_set(jdoc, '{statusFields,userEmailValidated}', ${boolString}::jsonb) where id=${user.id} "

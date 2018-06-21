@@ -225,21 +225,21 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
     "remove the given user and reserve username" in {
       val username = "testuser"
       val user = GuardianUser(User("id", "email", username = Some(username)))
-      when(pgUserRepo.delete(user.idapiUser)).thenReturn(Future.successful(\/-(1)))
+      when(identityApiClient.deleteUserById(user.idapiUser.id)).thenReturn(Future.successful(\/-(())))
       when(pgReservedUsernameRepo.addReservedUsername(username)).thenReturn(Future.successful(\/-(ReservedUsernameList(List(username)))))
       Await.result(service.delete(user), 1.second) shouldEqual \/-(ReservedUsernameList(List(username)))
     }
 
     "remove the given user and return existing reserved usernames when user has no username" in {
       val user = GuardianUser(User("id", "email", username = None))
-      when(pgUserRepo.delete(user.idapiUser)).thenReturn(Future.successful(\/-(1)))
+      when(identityApiClient.deleteUserById(user.idapiUser.id)).thenReturn(Future.successful(\/-(())))
       when(pgReservedUsernameRepo.loadReservedUsernames).thenReturn(Future.successful(\/-(ReservedUsernameList(Nil))))
       Await.result(service.delete(user), 1.second) shouldEqual \/-(ReservedUsernameList(Nil))
     }
 
     "return internal server api error if an error occurs deleting the user" in {
       val user = GuardianUser(User("id", "email"))
-      when(pgUserRepo.delete(user.idapiUser)).thenReturn(Future.successful(-\/(ApiError("boom"))))
+      when(identityApiClient.deleteUserById(user.idapiUser.id)).thenReturn(Future.successful(-\/(ApiError("boom"))))
       Await.result(service.delete(user), 1.second) shouldEqual -\/(ApiError("boom"))
     }
   }
