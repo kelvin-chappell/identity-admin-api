@@ -310,7 +310,8 @@ Resources:
 
             # systemd stuff
             total_mem=$(grep MemTotal /proc/meminfo | awk '{ print $2 }')
-            heap_size_in_mb=$(python -c "print int($total_mem * 0.8 / 1024)")
+            # take into account the 500MB used by logstash
+            heap_size_in_mb=$(python -c "print int(($total_mem / 1024 - 500) * 0.6)")
 
             sed -i "s/<APP>/${App}/g" /etc/systemd/system/${App}.service
             sed -i "s/<STAGE>/${Stage}/g" /etc/systemd/system/${App}.service
