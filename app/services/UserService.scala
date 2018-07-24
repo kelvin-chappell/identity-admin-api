@@ -4,6 +4,7 @@ import javax.inject.{Inject, Singleton}
 
 import actors.EventPublishingActor.{DisplayNameChanged, EmailValidationChanged}
 import actors.EventPublishingActorProvider
+import actors.metrics.{MetricsActorProvider, MetricsSupport}
 import akka.actor.ActorSystem
 import com.gu.identity.util.Logging
 import configuration.Config.PublishEvents.eventsEnabled
@@ -28,8 +29,11 @@ import scalaz.{-\/, EitherT, \/-}
     discussionService: DiscussionService,
     postgresDeletedUserRepository: PostgresDeletedUserRepository,
     postgresReservedUsernameRepository: PostgresReservedUsernameRepository,
-    postgresUsersReadRepository: PostgresUserRepository)
-    (implicit ec: ExecutionContext, actorSystem: ActorSystem) extends Logging {
+    postgresUsersReadRepository: PostgresUserRepository,
+    val metricsActorProvider: MetricsActorProvider)
+    (implicit ec: ExecutionContext, val actorSystem: ActorSystem) extends Logging with MetricsSupport {
+
+  private implicit val metricsNamespace = MetricsSupport.Namespace("identity-admin")
 
   def update(existingUser: User, userUpdateRequest: UserUpdateRequest): ApiResponse[User] = {
     val emailValid = isEmailValid(existingUser, userUpdateRequest)
@@ -118,7 +122,7 @@ import scalaz.{-\/, EitherT, \/-}
   }
 
   def search(query: String, limit: Option[Int] = None, offset: Option[Int] = None): ApiResponse[SearchResponse] = {
-   def combineSearchResults(activeUsers: SearchResponse, deletedUsers: SearchResponse) = {
+    def combineSearchResults(activeUsers: SearchResponse, deletedUsers: SearchResponse): SearchResponse = {
       val combinedTotal = activeUsers.total + deletedUsers.total
       val combinedResults = activeUsers.results ++ deletedUsers.results
       activeUsers.copy(total = combinedTotal, results = combinedResults)
@@ -131,24 +135,36 @@ import scalaz.{-\/, EitherT, \/-}
     val activeUsersF = EitherT(postgresUsersReadRepository.search(query, limit, offset))
     val deletedUsersF = EitherT(postgresDeletedUserRepository.search(query))
 
-    (for {
-      usersByMemNum <- usersByMemNumF
-      orphans <- orphansF
-      usersBySubId <- usersBySubIdF
+    def searchThirdParties() = {
+      for {
+        usersByMemNum <- usersByMemNumF
+        orphans <- orphansF
+        usersBySubId <- usersBySubIdF
+      } yield {
+        if (usersBySubId.results.nonEmpty)
+          usersBySubId
+        else if (orphans.results.nonEmpty)
+          orphans
+        else
+          usersByMemNum
+      }
+    }
+
+    def searchThirdPartiesIfEmpty(idUsers: SearchResponse) = {
+      if (idUsers.results.isEmpty)
+        searchThirdParties()
+      else
+        EitherT.right[Future, ApiError, SearchResponse](Future.successful(idUsers))
+    }
+
+    val searchResult = for {
       activeUsers <- activeUsersF
       deletedUsers <- deletedUsersF
-    } yield {
-      val idUsers = combineSearchResults(activeUsers, deletedUsers)
+      idUsers = combineSearchResults(activeUsers, deletedUsers)
+      foundUsers <- searchThirdPartiesIfEmpty(idUsers)
+    } yield foundUsers
 
-      if (idUsers.results.nonEmpty)
-        idUsers
-      else if (usersBySubId.results.nonEmpty)
-        usersBySubId
-      else if (orphans.results.nonEmpty)
-        orphans
-      else
-        usersByMemNum
-    }).run
+    searchResult.run
   }
 
   def unreserveEmail(id: String) = postgresDeletedUserRepository.remove(id)
@@ -161,7 +177,7 @@ import scalaz.{-\/, EitherT, \/-}
       case -\/(_) => \/-(user)
     }
 
-  def searchOrphan(email: String): ApiResponse[SearchResponse] = {
+  def searchOrphan(email: String): ApiResponse[SearchResponse] = withMetricsFE("searchOrphan") {
     def isEmail(query: String) = query.matches("""^[a-zA-Z0-9\.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r.toString())
 
     val orphanSearchResponse = SearchResponse.create(1, 0, List(Orphan(email = email)))
@@ -188,7 +204,7 @@ import scalaz.{-\/, EitherT, \/-}
   private def salesforceSubscriptionToIdentityUser(sfSub: SalesforceSubscription) =
     SearchResponse.create(1, 0, List(IdentityUser(sfSub.email, sfSub.identityId)))
 
-  def searchIdentityByMembership(membershipNumber: String): ApiResponse[SearchResponse] = {
+  def searchIdentityByMembership(membershipNumber: String): ApiResponse[SearchResponse] = withMetricsFE("searchIdentityByMembership") {
     def couldBeMembershipNumber(query: String) = query forall Character.isDigit
 
     if (couldBeMembershipNumber(membershipNumber)) {
@@ -200,7 +216,7 @@ import scalaz.{-\/, EitherT, \/-}
     } else Future.successful(\/-(SearchResponse.create(0, 0, Nil)))
   }
 
-  def searchIdentityBySubscriptionId(subscriberId: String): ApiResponse[SearchResponse] = {
+  def searchIdentityBySubscriptionId(subscriberId: String): ApiResponse[SearchResponse] = withMetricsFE("searchIdentityBySubscriptionId") {
     def isSubscriberId(query: String) = List("A-S", "GA0").contains(query.take(3))
 
     // execute these in parallel

@@ -46,11 +46,15 @@ case class Samples(samples: Map[SampleId, List[Sample]] = Map()) {
   }
 
   def toAmazonRequests(dimensions: Dimension*): Seq[PutMetricDataRequest] = {
-    groupByNamespace.map { case (namepsace, samps) =>
+    for {
+      (namepsace, namespaceSamples) <- groupByNamespace.toSeq
+      amazonStats = namespaceSamples.toAmazonStats(dimensions: _*)
+      groupedStats <- amazonStats.grouped(20)
+    } yield {
       new PutMetricDataRequest()
         .withNamespace(namepsace)
-        .withMetricData(samps.toAmazonStats(dimensions:_*).asJava)
-    }.toSeq
+        .withMetricData(groupedStats.asJava)
+    }
   }
 }
 
