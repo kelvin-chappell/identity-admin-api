@@ -9,11 +9,10 @@ import com.typesafe.scalalogging.LazyLogging
 import configuration.Config.SearchValidation
 import models.client._
 import models.database.mongo.IdentityUser
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, Writes}
 import scalikejdbc._
 
 import scala.concurrent.{ExecutionContext, Future}
-import scalaz.-\/
 import scalaz.syntax.either._
 
 @Singleton
@@ -25,25 +24,26 @@ class PostgresUserRepository @Inject()(val actorSystem: ActorSystem,
 
   implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
 
-  def search(query: String, limit: Option[Int] = None, offset: Option[Int] = None): ApiResponse[SearchResponse] = withMetricsFE("user.search", s"$query $limit $offset") {
+  def search(queryValue: String, limit: Option[Int] = None, offset: Option[Int] = None): ApiResponse[SearchResponse] = withMetricsFE("user.search", s"$queryValue $limit $offset") {
+    def createGinSearchJson(fieldName: String, innerFieldName: String) =
+      Json.toJson(Map(fieldName -> Map(innerFieldName -> queryValue.toLowerCase)))(Writes.mapWrites).toString // Writes.mapWrites has to be explicit because of MongoJsonFormats.objectMapFormat
+
     val _offset = offset.getOrElse(0)
     val _limit = limit.getOrElse(SearchValidation.maximumLimit)
-    val lowcaseQuery = query.toLowerCase
     val sql =
-      sql"""
-       |SELECT jdoc, count(*) OVER() AS full_count FROM users
-       |WHERE id = $lowcaseQuery
-       |OR jdoc #>> '{searchFields,emailAddress}' = $lowcaseQuery
-       |OR jdoc #>> '{searchFields,username}' = $lowcaseQuery
-       |OR jdoc #>> '{searchFields,postcode}' = $lowcaseQuery
-       |OR jdoc #>> '{searchFields,postcodePrefix}' = $lowcaseQuery
-       |OR jdoc #>> '{searchFields,displayName}' = $lowcaseQuery
-       |OR jdoc #>> '{privateFields,registrationIp}' = $lowcaseQuery
-       |OR jdoc #>> '{privateFields,lastActiveIpAddress}' = $lowcaseQuery
-       |order by jdoc#>'{primaryEmailAddress}'
-       |LIMIT ${_limit}
-       |OFFSET ${_offset}
-       """.stripMargin
+      sql"""|SELECT jdoc, count(*) OVER() AS full_count FROM users
+            |WHERE id = ${queryValue.toLowerCase}
+            |OR jdoc@>${createGinSearchJson("searchFields", "emailAddress")}::jsonb
+            |OR jdoc@>${createGinSearchJson("searchFields", "username")}::jsonb
+            |OR jdoc@>${createGinSearchJson("searchFields", "postcode")}::jsonb
+            |OR jdoc@>${createGinSearchJson("searchFields", "postcodePrefix")}::jsonb
+            |OR jdoc@>${createGinSearchJson("searchFields", "displayName")}::jsonb
+            |OR jdoc@>${createGinSearchJson("privateFields", "registrationIp")}::jsonb
+            |OR jdoc@>${createGinSearchJson("privateFields", "lastActiveIpAddress")}::jsonb
+            |order by jdoc#>'{primaryEmailAddress}'
+            |LIMIT ${_limit}
+            |OFFSET ${_offset}
+            |""".stripMargin
     readOnly { implicit session =>
       val results = sql.map(rs => Json.parse(rs.string(1)).as[IdentityUser] -> rs.int(2)).list().apply()
       val count = results.headOption.map(_._2).getOrElse(0)

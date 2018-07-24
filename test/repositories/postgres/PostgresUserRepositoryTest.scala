@@ -2,7 +2,6 @@ package repositories.postgres
 
 import actors.MetricsActorProviderStub
 import akka.actor.ActorSystem
-import com.google.common.util.concurrent.MoreExecutors
 import models.client.{ApiResponse, SearchResponse, User, UserUpdateRequest}
 import models.database.mongo._
 import models.database.postgres.PostgresUserRepository
@@ -12,9 +11,7 @@ import org.scalatest.time.{Milliseconds, Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, DoNotDiscover, Matchers, WordSpecLike}
 import play.api.libs.json.Json
 import scalikejdbc._
-import support.PgTestUtils
-
-import scala.concurrent.ExecutionContext
+import support.{EmbeddedPostgresSupport, PgTestUtils}
 import scalaz.\/-
 import scalaz.syntax.std.option._
 
