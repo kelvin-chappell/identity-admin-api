@@ -6,7 +6,7 @@ import actors.EventPublishingActor.{DisplayNameChanged, EmailValidationChanged}
 import actors.EventPublishingActorProvider
 import actors.metrics.{MetricsActorProvider, MetricsSupport}
 import akka.actor.ActorSystem
-import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import configuration.Config.PublishEvents.eventsEnabled
 import models.{client, _}
 import models.client._
@@ -31,7 +31,7 @@ import scalaz.{-\/, EitherT, \/-}
     postgresReservedUsernameRepository: PostgresReservedUsernameRepository,
     postgresUsersReadRepository: PostgresUserRepository,
     val metricsActorProvider: MetricsActorProvider)
-    (implicit ec: ExecutionContext, val actorSystem: ActorSystem) extends Logging with MetricsSupport {
+    (implicit ec: ExecutionContext, val actorSystem: ActorSystem) extends LazyLogging with MetricsSupport {
 
   private implicit val metricsNamespace = MetricsSupport.Namespace("identity-admin")
 

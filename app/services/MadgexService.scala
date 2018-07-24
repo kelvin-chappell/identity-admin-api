@@ -2,7 +2,7 @@ package services
 
 import javax.inject.{Inject, Singleton}
 
-import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import configuration.Config
 import util.UserConverter._
 import models.client.{GNMMadgexUser, MadgexUser}
@@ -13,7 +13,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import play.api.libs.json.Json
 
 @Singleton class MadgexService @Inject() (
-    ws: WSClient, requestSigner: RequestSigner)(implicit ec: ExecutionContext) extends Logging {
+    ws: WSClient, requestSigner: RequestSigner)(implicit ec: ExecutionContext) extends LazyLogging {
 
   implicit val format = Json.format[MadgexUser]
 

@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import akka.NotUsed
 import javax.inject.{Inject, Singleton}
-import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import configuration.Config.TouchpointSalesforce._
 import models.client._
 import play.api.libs.json.{JsArray, Json}
@@ -41,7 +41,7 @@ case class IdentityId(value: String, fieldName: String = "Zuora__Subscription__r
 case class Email(value: String, fieldName: String = "Zuora__Subscription__r.Zuora__CustomerAccount__r.Contact__r.Email") extends UniqueIdentifier
 case class SubscriptionId(value: String, fieldName: String = "Subscription_Name__c") extends UniqueIdentifier
 
-@Singleton class SalesforceService @Inject() (ws: WSClient, actorSystem: ActorSystem)(implicit ec: ExecutionContext) extends Logging {
+@Singleton class SalesforceService @Inject() (ws: WSClient, actorSystem: ActorSystem)(implicit ec: ExecutionContext) extends LazyLogging {
 
   val cacheLoader = new CacheLoader[NotUsed, SFAuthentication] {
    override def load(k: NotUsed) : SFAuthentication = {

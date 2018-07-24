@@ -3,7 +3,7 @@ package monitoring
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchAsyncClientBuilder
 import com.amazonaws.services.cloudwatch.model.{Dimension, MetricDatum, PutMetricDataRequest, StatisticSet}
 import com.google.inject.ImplementedBy
-import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import configuration.Config
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -63,7 +63,7 @@ trait Metrics {
   def publishCount(name : String, count: Double): Unit
 }
 
-class CloudWatch extends Metrics with Logging {
+class CloudWatch extends Metrics with LazyLogging {
 
   private val application = Config.applicationName
   private val stageDimension: Dimension = new Dimension().withName("Stage").withValue(Config.stage)

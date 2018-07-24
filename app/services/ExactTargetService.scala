@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import com.exacttarget.fuelsdk._
 import com.exacttarget.fuelsdk.internal.Options.SaveOptions
 import com.exacttarget.fuelsdk.internal.{CreateOptions, CreateRequest, CreateResponse, SaveAction, SaveOption, Subscriber, SubscriberList, SubscriberStatus}
-import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import configuration.Config
 import javax.inject.{Inject, Singleton}
 import models.client._
@@ -18,7 +18,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 @Singleton class ExactTargetService @Inject()(postgresUsersReadRepository: PostgresUserRepository)
-                                             (implicit ec: ExecutionContext, actorSystem: ActorSystem) extends Logging {
+                                             (implicit ec: ExecutionContext, actorSystem: ActorSystem) extends LazyLogging {
 
   private val dateTimeFormatterUSA = DateTimeFormat.forPattern("MM/dd/yyyy h:mm:ss a")
   private val dateTimeFormatterGBR = DateTimeFormat.forPattern("dd/MM/yyyy h:mm:ss a")

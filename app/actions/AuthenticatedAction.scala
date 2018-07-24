@@ -5,7 +5,7 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import javax.inject._
 
-import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import configuration.Config
 import org.apache.commons.codec.binary.Base64
 import org.joda.time.{DateTime, DateTimeZone}
@@ -36,7 +36,7 @@ object HmacSigner {
   }
 }
 
-object HmacAuthenticator extends Logging {
+object HmacAuthenticator extends LazyLogging {
   val secret = Config.hmacSecret
 
   val HmacPattern = "HMAC\\s(.+)".r
@@ -69,7 +69,7 @@ object HmacAuthenticator extends Logging {
 }
 
 class AuthenticatedAction @Inject() (val parser: BodyParsers.Default)(implicit val executionContext: ExecutionContext)
-    extends ActionBuilder[Request, AnyContent] with Logging {
+    extends ActionBuilder[Request, AnyContent] with LazyLogging {
 
   def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]): Future[Result] = {
     Try {

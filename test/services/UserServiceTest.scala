@@ -1,6 +1,6 @@
 package services
 
-import actors.EventPublishingActorProvider
+import actors.{EventPublishingActorProvider, MetricsActorProviderStub}
 import akka.actor.ActorSystem
 import models.client._
 import models.database.postgres.{PostgresDeletedUserRepository, PostgresReservedUsernameRepository, PostgresUserRepository}
@@ -41,7 +41,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
   val service =
     spy(new UserService(identityApiClient,
       eventPublishingActorProvider, salesforceService, salesforceIntegration, madgexService, exactTargetService,
-      discussionService, pgDeletedUserRepo, pgReservedUsernameRepo, pgUserRepo))
+      discussionService, pgDeletedUserRepo, pgReservedUsernameRepo, pgUserRepo, MetricsActorProviderStub))
 
   before {
     Mockito.reset(identityApiClient, eventPublishingActorProvider, service, madgexService, pgDeletedUserRepo, pgReservedUsernameRepo, pgUserRepo)
