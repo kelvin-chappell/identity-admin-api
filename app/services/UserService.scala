@@ -256,10 +256,8 @@ import scalaz.{-\/, EitherT, \/-}
       activeUserOpt <- activeUserOptF
       deletedUserOpt <- deletedUserOptF.map(_.headOption)
     } yield {
-      if (activeUserOpt.isDefined)
-        activeUserOpt.map(idapiUser => GuardianUser(idapiUser = idapiUser))
-      else
-        deletedUserToActiveUser(deletedUserOpt)
+      activeUserOpt.map(idapiUser => GuardianUser(idapiUser = idapiUser))
+        .orElse(deletedUserToActiveUser(deletedUserOpt))
     }).run
   }
 
@@ -283,7 +281,7 @@ import scalaz.{-\/, EitherT, \/-}
       _ <- EitherT(identityApiClient.sendEmailValidation(user.id))
     } yield()).run
 
-  def enrichUserWithProducts(user: GuardianUser): ApiResponse[GuardianUser]  = {
+  def enrichUserWithProducts(user: GuardianUser): ApiResponse[GuardianUser] = withMetricsFE("enrichUserWithProducts") {
     val subscriptionF = EitherT(salesforceService.getSubscriptionByIdentityId(user.idapiUser.id))
     val membershipF = EitherT(salesforceService.getMembershipByIdentityId(user.idapiUser.id))
     val hasCommentedF = EitherT(discussionService.hasCommented(user.idapiUser.id))
