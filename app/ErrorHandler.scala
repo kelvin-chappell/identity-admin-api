@@ -5,11 +5,11 @@ import play.api.mvc.Results._
 
 import scala.concurrent._
 import javax.inject.Singleton
-import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import models.client.ApiError
 
 @Singleton
-class ErrorHandler extends HttpErrorHandler with Logging {
+class ErrorHandler extends HttpErrorHandler with LazyLogging {
   def onClientError(request: RequestHeader, statusCode: Int, message: String) = {
     if(statusCode == play.mvc.Http.Status.BAD_REQUEST) {
       logger.debug(s"Bad request: $request, error: $message")

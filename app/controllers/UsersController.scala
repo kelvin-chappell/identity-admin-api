@@ -4,7 +4,7 @@ import models.client.ClientJsonFormats._
 import javax.inject.{Inject, Singleton}
 
 import actions.{AuthenticatedAction, IdentityUserAction, OrphanUserAction}
-import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import com.gu.tip.Tip
 import configuration.Config
 import play.api.data.Forms._
@@ -31,7 +31,7 @@ import models.client.ApiError._
     orphanUserAction: OrphanUserAction,
     salesforce: SalesforceService,
     discussionService: DiscussionService,
-    exactTargetService: ExactTargetService)(implicit ec: ExecutionContext) extends AbstractController(cc) with Logging {
+    exactTargetService: ExactTargetService)(implicit ec: ExecutionContext) extends AbstractController(cc) with LazyLogging {
 
   def search(query: String, limit: Option[Int], offset: Option[Int]) = auth.async { request =>
     import Config.SearchValidation._

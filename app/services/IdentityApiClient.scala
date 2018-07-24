@@ -2,7 +2,7 @@ package services
 
 import javax.inject.Inject
 
-import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import configuration.Config
 import models.client.{ApiError, ApiResponse}
 import play.api.libs.json.Json
@@ -23,7 +23,7 @@ object IdentityApiErrorResponse {
   implicit val format = Json.format[IdentityApiErrorResponse]
 }
 
-class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) extends Logging {
+class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) extends LazyLogging {
 
   val baseUrl = Config.IdentityApi.baseUrl
   val clientToken = Config.IdentityApi.clientToken

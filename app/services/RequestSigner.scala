@@ -5,7 +5,7 @@ import javax.crypto.spec.SecretKeySpec
 import javax.inject.{Inject, Singleton}
 
 import com.google.inject.ImplementedBy
-import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.codec.binary.Base64
 import org.joda.time.DateTime
 import play.api.Configuration
@@ -19,7 +19,7 @@ import util.Formats
 }
 
 @ImplementedBy(classOf[RequestSignerWithSecret])
-trait RequestSigner extends Logging {
+trait RequestSigner extends LazyLogging {
 
   def secret: String
 

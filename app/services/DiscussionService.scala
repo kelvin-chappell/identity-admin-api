@@ -2,7 +2,7 @@ package services
 
 import javax.inject.{Inject, Singleton}
 
-import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import configuration.Config
 import models.client.{ApiError, ApiResponse}
 import play.api.http.Status
@@ -18,7 +18,7 @@ object DiscussionStats {
   implicit val format = Json.format[DiscussionStats]
 }
 
-@Singleton class DiscussionService @Inject() (ws: WSClient)(implicit ec: ExecutionContext) extends Logging {
+@Singleton class DiscussionService @Inject() (ws: WSClient)(implicit ec: ExecutionContext) extends LazyLogging {
   def hasCommented(id: String): ApiResponse[Boolean] = {
     ws.url(s"${Config.Discussion.apiUrl}/profile/$id/stats").get().map { response =>
       if (response.status == Status.NOT_FOUND) {

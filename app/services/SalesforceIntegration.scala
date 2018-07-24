@@ -5,14 +5,14 @@ import javax.inject._
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.services.sns.AmazonSNSClientBuilder
 import com.amazonaws.services.sns.model.PublishResult
-import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import configuration.Config
 import play.api.libs.json.Json
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-@Singleton class SalesforceIntegration @Inject() ()(implicit ec: ExecutionContext) extends Logging {
+@Singleton class SalesforceIntegration @Inject() ()(implicit ec: ExecutionContext) extends LazyLogging {
   private val snsTopic = Config.IdentitySalesforceQueue.snsTopic
   private val snsEndpoint = Config.IdentitySalesforceQueue.snsEndPoint
 

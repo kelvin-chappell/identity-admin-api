@@ -20,7 +20,7 @@ class PostgresUserRepository @Inject()(val actorSystem: ActorSystem,
                                        val metricsActorProvider: MetricsActorProvider) extends LazyLogging
   with PostgresJsonFormats
   with PostgresUtils
-  with MetricsSupport{
+  with MetricsSupport {
 
   implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
 

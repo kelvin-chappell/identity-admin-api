@@ -2,11 +2,11 @@ package services
 
 import com.amazonaws.services.simpleemail._
 import com.amazonaws.services.simpleemail.model._
-import com.gu.identity.util.Logging
+import com.typesafe.scalalogging.LazyLogging
 import configuration.Config
 import scala.util.{Failure, Success, Try}
 
-object EmailService extends Logging {
+object EmailService extends LazyLogging {
   private val client = AmazonSimpleEmailServiceAsyncClientBuilder.standard()
       .withCredentials(Config.AWS.credentialsProvider)
       .withRegion(Config.AWS.region)
