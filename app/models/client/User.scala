@@ -134,8 +134,8 @@ object ConsumerEmails {
 }
 
 case class ExactTargetSubscriber(
-  status: String, newsletters:
-  Option[NewslettersSubscription],
+  status: String,
+  newsletters: Option[NewslettersSubscription],
   consumerEmails: Option[ConsumerEmails])
 
 object ExactTargetSubscriber {

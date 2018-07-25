@@ -35,6 +35,7 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
   val salesforceService = mock[SalesforceService]
   val identityUserAction = mock[IdentityUserAction]
   val orphanUserAction = mock[OrphanUserAction]
+  val discussionMock = mock[DiscussionService]
 
   when(exactTargetServiceMock.newslettersSubscriptionByIdentityId("abc")).thenReturn(Future.successful(\/-(None)))
 
@@ -66,7 +67,7 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
     identityUserAction,
     orphanUserAction,
     salesforceService,
-    new DiscussionService(dapiWsMock),
+    discussionMock,
     exactTargetServiceMock)
 
 
@@ -151,6 +152,49 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
       val result = controller.findById(testIdentityId)(FakeRequest())
       status(result) shouldEqual OK
       contentAsJson(result) shouldEqual Json.toJson(user)
+    }
+  }
+
+  "findByIdLite" should {
+    "find an identity user" in {
+      val user = GuardianUser(User(testIdentityId, "test@test.com"))
+      when(userService.findById(testIdentityId)).thenReturn(Future.successful(\/-(Some(user))))
+      val result = controller.findByIdLite(testIdentityId)(FakeRequest())
+      status(result) shouldEqual OK
+      contentAsJson(result) shouldEqual Json.toJson(user.idapiUser)
+    }
+  }
+
+  "findSalesforceDetails" should {
+    "retrieve sales force details" in {
+      val salesForceSubscription = SalesforceSubscription(email = "test@test.com")
+      val membershipDetails = SalesforceSubscription(email = "test2@test.com")
+      when(salesforceService.getSubscriptionByIdentityId(testIdentityId)).thenReturn(Future.successful(\/-(Some(salesForceSubscription))))
+      when(salesforceService.getMembershipByIdentityId(testIdentityId)).thenReturn(Future.successful(\/-(Some(membershipDetails))))
+      val result = controller.findSalesforceDetails(testIdentityId)(FakeRequest())
+      status(result) shouldEqual OK
+      contentAsJson(result) shouldEqual Json.toJson(SalesforceDetails(Some(salesForceSubscription), Some(membershipDetails)))
+    }
+  }
+
+  "hasCommented" should {
+    "returned whether a user has commented" in {
+      when(discussionMock.hasCommented(testIdentityId)) thenReturn Future.successful(\/-(true))
+      val result = controller.hasCommented(testIdentityId)(FakeRequest())
+      status(result) shouldEqual OK
+      contentAsJson(result) shouldEqual Json.toJson(true)
+    }
+  }
+
+  "findExactTargetDetails" should {
+    "find a user's exact target details" in {
+      val exactTargetSub = ExactTargetSubscriber("status", None, None)
+      val contributions = List(Contribution("date", "currency", "amount"))
+      when(exactTargetServiceMock.subscriberByIdentityId(testIdentityId)).thenReturn(Future.successful(\/-(Some(exactTargetSub))))
+      when(exactTargetServiceMock.contributionsByIdentityId(testIdentityId)).thenReturn(Future.successful(\/-(contributions)))
+      val result = controller.findExactTargetDetails(testIdentityId)(FakeRequest())
+      status(result) shouldEqual OK
+      contentAsJson(result) shouldEqual Json.toJson(ExactTargetDetails(Some(exactTargetSub), contributions))
     }
   }
 
