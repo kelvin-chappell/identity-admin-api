@@ -105,6 +105,12 @@ object SalesforceSubscription {
   implicit val format = Json.format[SalesforceSubscription]
 }
 
+case class SalesforceDetails(subscriptionDetails: Option[SalesforceSubscription], membershipDetails: Option[SalesforceSubscription])
+
+object SalesforceDetails {
+  implicit val format = Json.format[SalesforceDetails]
+}
+
 case class NewslettersSubscription(list: List[String])
 
 object NewslettersSubscription {
@@ -140,6 +146,12 @@ case class Contribution(date: String, currency: String, amount: String)
 
 object Contribution {
   implicit val format = Json.format[Contribution]
+}
+
+case class ExactTargetDetails(exactTargetSubscriber: Option[ExactTargetSubscriber], contributions: List[Contribution])
+
+object ExactTargetDetails {
+  implicit val format = Json.format[ExactTargetDetails]
 }
 
 case class Consent(

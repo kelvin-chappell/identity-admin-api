@@ -3,6 +3,10 @@ GET        /authHealthcheck                         @controllers.HealthCheckCont
 
 GET        /v1/user/search                          @controllers.UsersController.search(query: String, limit: Option[Int], offset: Option[Int])
 GET        /v1/user/:id                             @controllers.UsersController.findById(id: String)
+GET        /v1/user/:id/salesforce                  @controllers.UsersController.findSalesforceDetails(id: String)
+GET        /v1/user/:id/has-commented               @controllers.UsersController.hasCommented(id: String)
+GET        /v1/user/:id/cmt                         @controllers.UsersController.findExactTargetDetails(id: String)
+GET        /v2/user/:id                             @controllers.UsersController.findByIdLite(id: String)
 PUT        /v1/user/:id                             @controllers.UsersController.update(id: String)
 DELETE     /v1/user/:id                             @controllers.UsersController.delete(id: String)
 POST       /v1/user/:id/send-validation-email       @controllers.UsersController.sendEmailValidation(id: String)

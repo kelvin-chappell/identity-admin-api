@@ -20,7 +20,7 @@ import scalaz.std.string._
 import scalaz.syntax.validation._
 import scalaz.syntax.apply._
 import scalaz.syntax.std.boolean._
-import models.client.{ApiError, UserUpdateRequest, UserUpdateRequestValidator}
+import models.client._
 import models.client.ApiError._
 
 @Singleton class UsersController @Inject() (
@@ -69,6 +69,50 @@ import models.client.ApiError._
 
   def findById(id: String) = (auth andThen identityUserAction(id)) { request =>
     Ok(request.user)
+  }
+
+  def findByIdLite(id: String) = auth.async { _ =>
+    userService.findById(id).map {
+      case \/-(maybeUser) => maybeUser.fold[Result](NotFound)(user => Ok(user.idapiUser))
+      case -\/(error) => InternalServerError(error)
+    }
+  }
+
+  def findSalesforceDetails(id: String) = auth.async { _ =>
+    val subscriptionF = EitherT(salesforce.getSubscriptionByIdentityId(id))
+    val membershipF = EitherT(salesforce.getMembershipByIdentityId(id))
+
+    val salesForceDetails: DisjunctionT[Future, ApiError, SalesforceDetails] = for {
+      subscription <- subscriptionF
+      membership <- membershipF
+    } yield SalesforceDetails(subscription, membership)
+
+    salesForceDetails.run.map {
+      case \/-(result) => Ok(result)
+      case -\/(error) => InternalServerError(error)
+    }
+  }
+
+  def hasCommented(id: String) = auth.async { _ =>
+    discussionService.hasCommented(id).map {
+      case \/-(result) => Ok(result)
+      case -\/(error) => InternalServerError(error)
+    }
+  }
+
+  def findExactTargetDetails(id: String) = auth.async { _ =>
+    val exactTargetSubF = EitherT(exactTargetService.subscriberByIdentityId(id))
+    val contributionsF = EitherT(exactTargetService.contributionsByIdentityId(id))
+
+    val result = for {
+      exactTargetSub <- exactTargetSubF
+      contributions <- contributionsF
+    } yield ExactTargetDetails(exactTargetSub, contributions)
+
+    result.run.map {
+      case \/-(result) => Ok(result)
+      case -\/(error) => InternalServerError(error)
+    }
   }
 
   def findOrphanByEmail(email: String) = (auth andThen orphanUserAction(email)) { request =>
