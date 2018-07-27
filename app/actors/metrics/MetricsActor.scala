@@ -30,7 +30,7 @@ object MetricsActor {
 
 
 @Singleton
-class MetricsActorProvider @Inject()(actorSystem: ActorSystem, cloudwatch: CloudWatch) extends Provider[ActorRef] {
+class MetricsActorProvider @Inject()(val actorSystem: ActorSystem, cloudwatch: CloudWatch) extends Provider[ActorRef] {
   private lazy val metricsActorProvider: ActorRef = actorSystem.actorOf(MetricsActor.props(cloudwatch))
 
   override def get(): ActorRef = metricsActorProvider

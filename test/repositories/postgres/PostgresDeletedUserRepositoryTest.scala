@@ -30,7 +30,7 @@ class PostgresDeletedUserRepositoryTest extends WordSpecLike
 
   trait TestFixture {
     private val executor = ExecutionContext.fromExecutor(MoreExecutors.directExecutor())
-    val repo = new PostgresDeletedUserRepository(actorSystem, MetricsActorProviderStub)
+    val repo = new PostgresDeletedUserRepository(MetricsActorProviderStub)
     execSql(sql"""
                  | INSERT INTO reservedemails (id, jdoc) values
                  | ('1234', '{"_id": "1234", "email": "foo@example.com", "username": "admin"}'::jsonb)

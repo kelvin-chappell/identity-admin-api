@@ -3,7 +3,6 @@ package models.database.postgres
 import java.util.concurrent.Executors
 
 import actors.metrics.{MetricsActorProvider, MetricsSupport}
-import akka.actor.ActorSystem
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.scalalogging.LazyLogging
 import models.client.{ApiResponse, SearchResponse}
@@ -15,8 +14,7 @@ import scala.concurrent.ExecutionContext
 import scalaz.{-\/, \/-}
 import scalaz.syntax.std.option._
 
-@Singleton class PostgresDeletedUserRepository @Inject()(val actorSystem: ActorSystem,
-                                                         val metricsActorProvider: MetricsActorProvider)
+@Singleton class PostgresDeletedUserRepository @Inject()(val metricsActorProvider: MetricsActorProvider)
   extends PostgresJsonFormats with PostgresUtils with MetricsSupport with LazyLogging {
 
   implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
