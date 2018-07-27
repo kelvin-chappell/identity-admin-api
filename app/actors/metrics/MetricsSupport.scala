@@ -22,7 +22,7 @@ object MetricsSupport {
 trait MetricsSupport extends LazyLogging {
   import MetricsSupport._
 
-  def actorSystem: ActorSystem
+  def actorSystem: ActorSystem = metricsActorProvider.actorSystem
   def metricsActorProvider: MetricsActorProvider
   private implicit val ec = actorSystem.dispatcher
 

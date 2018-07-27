@@ -31,7 +31,7 @@ import scalaz.{-\/, EitherT, \/-}
     postgresReservedUsernameRepository: PostgresReservedUsernameRepository,
     postgresUsersReadRepository: PostgresUserRepository,
     val metricsActorProvider: MetricsActorProvider)
-    (implicit ec: ExecutionContext, val actorSystem: ActorSystem) extends LazyLogging with MetricsSupport {
+    (implicit ec: ExecutionContext) extends LazyLogging with MetricsSupport {
 
   private implicit val metricsNamespace = MetricsSupport.Namespace("identity-admin")
 
