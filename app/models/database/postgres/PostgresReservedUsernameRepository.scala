@@ -3,7 +3,6 @@ package models.database.postgres
 import java.util.UUID
 
 import actors.metrics.{MetricsActorProvider, MetricsSupport}
-import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import models.client
@@ -14,8 +13,7 @@ import scalikejdbc._
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.{-\/, \/-}
 
-class PostgresReservedUsernameRepository @Inject()(val actorSystem: ActorSystem,
-                                                   val metricsActorProvider: MetricsActorProvider)(implicit ec: ExecutionContext) extends LazyLogging
+class PostgresReservedUsernameRepository @Inject()(val metricsActorProvider: MetricsActorProvider)(implicit ec: ExecutionContext) extends LazyLogging
   with PostgresJsonFormats
   with PostgresUtils
   with MetricsSupport {

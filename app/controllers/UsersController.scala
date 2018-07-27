@@ -4,6 +4,8 @@ import models.client.ClientJsonFormats._
 import javax.inject.{Inject, Singleton}
 
 import actions.{AuthenticatedAction, IdentityUserAction, OrphanUserAction}
+import actors.metrics.{MetricsActorProvider, MetricsSupport}
+import akka.actor.ActorSystem
 import com.typesafe.scalalogging.LazyLogging
 import com.gu.tip.Tip
 import configuration.Config
@@ -23,7 +25,7 @@ import scalaz.syntax.std.boolean._
 import models.client._
 import models.client.ApiError._
 
-@Singleton class UsersController @Inject() (
+@Singleton class UsersController @Inject()(
     cc: ControllerComponents,
     userService: UserService,
     auth: AuthenticatedAction,
@@ -31,7 +33,11 @@ import models.client.ApiError._
     orphanUserAction: OrphanUserAction,
     salesforce: SalesforceService,
     discussionService: DiscussionService,
-    exactTargetService: ExactTargetService)(implicit ec: ExecutionContext) extends AbstractController(cc) with LazyLogging {
+    exactTargetService: ExactTargetService,
+    override val metricsActorProvider: MetricsActorProvider)
+    (implicit ec: ExecutionContext) extends AbstractController(cc) with LazyLogging with MetricsSupport {
+
+  private implicit val metricsNamespace = MetricsSupport.Namespace("identity-admin")
 
   def search(query: String, limit: Option[Int], offset: Option[Int]) = auth.async { request =>
     import Config.SearchValidation._
@@ -71,47 +77,62 @@ import models.client.ApiError._
     Ok(request.user)
   }
 
-  def findByIdLite(id: String) = auth.async { _ =>
-    userService.findById(id).map {
-      case \/-(maybeUser) => maybeUser.fold[Result](NotFound)(user => Ok(user.idapiUser))
-      case -\/(error) => InternalServerError(error)
+  def findIdentityUser(id: String) = auth.async { _ =>
+    withMetricsF("findIdentityUser") {
+      val userWithBanStatus = for {
+        user <- OptionT(EitherT(userService.findById(id)))
+        enrichedUser = userService.enrichUserWithBannedStatus(user).map(_.map(Option.apply))
+        userWithBanStatus <- OptionT(EitherT(enrichedUser))
+      } yield userWithBanStatus
+
+      userWithBanStatus.run.run.map {
+        case \/-(maybeUser) => maybeUser.fold[Result](NotFound)(user => Ok(user))
+        case -\/(error) => InternalServerError(error)
+      }
     }
+
   }
 
   def findSalesforceDetails(id: String) = auth.async { _ =>
-    val subscriptionF = EitherT(salesforce.getSubscriptionByIdentityId(id))
-    val membershipF = EitherT(salesforce.getMembershipByIdentityId(id))
+    withMetricsF("findSalesforceDetails") {
+      val subscriptionF = EitherT(salesforce.getSubscriptionByIdentityId(id))
+      val membershipF = EitherT(salesforce.getMembershipByIdentityId(id))
 
-    val salesForceDetails: DisjunctionT[Future, ApiError, SalesforceDetails] = for {
-      subscription <- subscriptionF
-      membership <- membershipF
-    } yield SalesforceDetails(subscription, membership)
+      val salesForceDetails: DisjunctionT[Future, ApiError, SalesforceDetails] = for {
+        subscription <- subscriptionF
+        membership <- membershipF
+      } yield SalesforceDetails(subscription, membership)
 
-    salesForceDetails.run.map {
-      case \/-(result) => Ok(result)
-      case -\/(error) => InternalServerError(error)
+      salesForceDetails.run.map {
+        case \/-(result) => Ok(result)
+        case -\/(error) => InternalServerError(error)
+      }
     }
   }
 
   def hasCommented(id: String) = auth.async { _ =>
-    discussionService.hasCommented(id).map {
-      case \/-(result) => Ok(result)
-      case -\/(error) => InternalServerError(error)
+    withMetricsF("hasCommented") {
+      discussionService.hasCommented(id).map {
+        case \/-(result) => Ok(result)
+        case -\/(error) => InternalServerError(error)
+      }
     }
   }
 
   def findExactTargetDetails(id: String) = auth.async { _ =>
-    val exactTargetSubF = EitherT(exactTargetService.subscriberByIdentityId(id))
-    val contributionsF = EitherT(exactTargetService.contributionsByIdentityId(id))
+    withMetricsF("findExactTargetDetails") {
+      val exactTargetSubF = EitherT(exactTargetService.subscriberByIdentityId(id))
+      val contributionsF = EitherT(exactTargetService.contributionsByIdentityId(id))
 
-    val result = for {
-      exactTargetSub <- exactTargetSubF
-      contributions <- contributionsF
-    } yield ExactTargetDetails(exactTargetSub, contributions)
+      val result = for {
+        exactTargetSub <- exactTargetSubF
+        contributions <- contributionsF
+      } yield ExactTargetDetails(exactTargetSub, contributions)
 
-    result.run.map {
-      case \/-(result) => Ok(result)
-      case -\/(error) => InternalServerError(error)
+      result.run.map {
+        case \/-(result) => Ok(result)
+        case -\/(error) => InternalServerError(error)
+      }
     }
   }
 
