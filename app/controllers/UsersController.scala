@@ -34,7 +34,8 @@ import models.client.ApiError._
     salesforce: SalesforceService,
     discussionService: DiscussionService,
     exactTargetService: ExactTargetService,
-    val metricsActorProvider: MetricsActorProvider)(implicit ec: ExecutionContext) extends AbstractController(cc) with LazyLogging with MetricsSupport {
+    override val metricsActorProvider: MetricsActorProvider)
+    (implicit ec: ExecutionContext) extends AbstractController(cc) with LazyLogging with MetricsSupport {
 
   private implicit val metricsNamespace = MetricsSupport.Namespace("identity-admin")
 

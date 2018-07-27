@@ -22,9 +22,9 @@ object MetricsSupport {
 trait MetricsSupport extends LazyLogging {
   import MetricsSupport._
 
-  def actorSystem: ActorSystem = metricsActorProvider.actorSystem
   def metricsActorProvider: MetricsActorProvider
-  private implicit def ec = actorSystem.dispatcher
+  lazy val actorSystem: ActorSystem = metricsActorProvider.actorSystem
+  private implicit lazy val ec = actorSystem.dispatcher
 
   private def reportSuccess(inProgressSwitch: AtomicReference[Boolean], namespace: Namespace, name: String, stopWatch: StopWatch): Unit = {
     if (inProgressSwitch.getAndSet(false)) {
