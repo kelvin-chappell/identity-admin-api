@@ -71,11 +71,19 @@ import models.client.ApiError._
     Ok(request.user)
   }
 
-  def findByIdLite(id: String) = auth.async { _ =>
-    userService.findById(id).map {
-      case \/-(maybeUser) => maybeUser.fold[Result](NotFound)(user => Ok(user.idapiUser))
+  def findIdentityUser(id: String) = auth.async { _ =>
+
+    val userWithBanStatus = for {
+      user <- OptionT(EitherT(userService.findById(id)))
+      enrichedUser = userService.enrichUserWithBannedStatus(user).map(_.map(Option.apply))
+      userWithBanStatus <- OptionT(EitherT(enrichedUser))
+    } yield userWithBanStatus
+
+    userWithBanStatus.run.run.map {
+      case \/-(maybeUser) => maybeUser.fold[Result](NotFound)(user => Ok(user))
       case -\/(error) => InternalServerError(error)
     }
+
   }
 
   def findSalesforceDetails(id: String) = auth.async { _ =>

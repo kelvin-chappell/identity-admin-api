@@ -155,13 +155,15 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
     }
   }
 
-  "findByIdLite" should {
+  "findIdentityUser" should {
     "find an identity user" in {
       val user = GuardianUser(User(testIdentityId, "test@test.com"))
+      val expectedUser = user.copy(blocklisted = true)
       when(userService.findById(testIdentityId)).thenReturn(Future.successful(\/-(Some(user))))
-      val result = controller.findByIdLite(testIdentityId)(FakeRequest())
+      when(userService.enrichUserWithBannedStatus(user)).thenReturn(Future.successful(\/-(expectedUser)))
+      val result = controller.findIdentityUser(testIdentityId)(FakeRequest())
       status(result) shouldEqual OK
-      contentAsJson(result) shouldEqual Json.toJson(user.idapiUser)
+      contentAsJson(result) shouldEqual Json.toJson(expectedUser)
     }
   }
 
