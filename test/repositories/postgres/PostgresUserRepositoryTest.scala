@@ -32,7 +32,7 @@ class PostgresUserRepositoryTest extends WordSpecLike
   override implicit val patienceConfig = PatienceConfig(Span(5, Seconds), Span(200, Milliseconds))
 
   trait TestFixture {
-    val repo = new PostgresUserRepository(actorSystem, MetricsActorProviderStub)
+    val repo = new PostgresUserRepository(MetricsActorProviderStub)
     implicit val ec = repo.ec
     val testUser = IdentityUser(
       "identitydev@guardian.co.uk", "1234",

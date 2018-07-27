@@ -1,6 +1,7 @@
 package controllers
 
 import actions._
+import actors.MetricsActorProviderStub
 import mockws.MockWS
 import models._
 import models.client._
@@ -68,7 +69,8 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
     orphanUserAction,
     salesforceService,
     discussionMock,
-    exactTargetServiceMock)
+    exactTargetServiceMock,
+    MetricsActorProviderStub)
 
 
   "search" should {

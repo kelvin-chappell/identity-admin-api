@@ -33,7 +33,7 @@ class PostgresReservedUsernameRepositoryTest extends WordSpecLike
   trait TestFixture {
     execSql(sql"truncate table reservedusernames")
     private val executor = ExecutionContext.fromExecutor(MoreExecutors.directExecutor())
-    val repo = new PostgresReservedUsernameRepository(actorSystem, MetricsActorProviderStub)(executor)
+    val repo = new PostgresReservedUsernameRepository(MetricsActorProviderStub)(executor)
     val usernames = List.fill(25)(ReservedUsername(UUID.randomUUID().toString))
     usernames.foreach { username =>
       execSql(
