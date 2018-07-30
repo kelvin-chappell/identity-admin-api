@@ -1,7 +1,6 @@
 package services
 
 import javax.inject.{Inject, Singleton}
-
 import actors.EventPublishingActor.{DisplayNameChanged, EmailValidationChanged}
 import actors.EventPublishingActorProvider
 import actors.metrics.{MetricsActorProvider, MetricsSupport}
@@ -11,7 +10,7 @@ import configuration.Config.PublishEvents.eventsEnabled
 import models.{client, _}
 import models.client._
 import models.database.mongo._
-import models.database.postgres.{PostgresDeletedUserRepository, PostgresReservedUsernameRepository, PostgresUserRepository}
+import models.database.postgres._
 import uk.gov.hmrc.emailaddress.EmailAddress
 import util.UserConverter._
 
@@ -30,6 +29,7 @@ import scalaz.{-\/, EitherT, \/-}
     postgresDeletedUserRepository: PostgresDeletedUserRepository,
     postgresReservedUsernameRepository: PostgresReservedUsernameRepository,
     postgresUsersReadRepository: PostgresUserRepository,
+    postgresSubjectAccessRequestrepository: PostgresSubjectAccessRequestRepository,
     val metricsActorProvider: MetricsActorProvider)
     (implicit ec: ExecutionContext) extends LazyLogging with MetricsSupport {
 
@@ -301,6 +301,14 @@ import scalaz.{-\/, EitherT, \/-}
         hasCommented = hasCommented,
         exactTargetSubscriber = exactTargetSub,
         contributions = contributions)
+    }).run
+  }
+
+  def getSubjectAccessRequest(id: String): ApiResponse[Option[Int]] = {
+    (for {
+      id <- EitherT(postgresSubjectAccessRequestrepository.subjectAccessRequestById(id))
+    } yield {
+      id
     }).run
   }
 }

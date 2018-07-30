@@ -1,8 +1,9 @@
 package controllers
 
+import java.io.PrintWriter
+
 import models.client.ClientJsonFormats._
 import javax.inject.{Inject, Singleton}
-
 import actions.{AuthenticatedAction, IdentityUserAction, OrphanUserAction}
 import actors.metrics.{MetricsActorProvider, MetricsSupport}
 import akka.actor.ActorSystem
@@ -24,6 +25,10 @@ import scalaz.syntax.apply._
 import scalaz.syntax.std.boolean._
 import models.client._
 import models.client.ApiError._
+
+import scala.tools.nsc.io.File
+import java.nio.file.Files
+//import play.api.libs.Files.TemporaryFile
 
 @Singleton class UsersController @Inject()(
     cc: ControllerComponents,
@@ -230,5 +235,21 @@ import models.client.ApiError._
         _ => NoContent
       )
     )
+  }
+
+  def userSubjectAccessRequest(id: String) = auth.async { implicit request =>
+    logger.info(s"Getting subject access request for user with id: $id")
+    withMetricsF("userSubjectAccessRequest") {
+      val userSarResponse = EitherT(userService.getSubjectAccessRequest(id))
+
+      userSarResponse.run.map {
+        case \/-(result) => {
+          val fileToSend = Files.createTempFile(s"sar-$id", ".txt").toFile
+          new PrintWriter(fileToSend) { write(result.toString) }.close()
+          Ok.sendFile(fileToSend, onClose = () => { fileToSend.delete() })
+        }
+        case -\/(error) => InternalServerError(error)
+      }
+    }
   }
 }
