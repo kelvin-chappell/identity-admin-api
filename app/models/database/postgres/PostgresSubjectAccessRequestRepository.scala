@@ -5,11 +5,15 @@ import java.util.concurrent.Executors
 import actors.metrics.{MetricsActorProvider, MetricsSupport}
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.scalalogging.LazyLogging
-import models.client.{ApiResponse, User}
-import play.api.libs.json.Json
+import models.client.ApiResponse
+import scalaz.EitherT
 import scalikejdbc._
+import scalaz._
+import Scalaz._
+import net.liftweb.json.JsonDSL._
+import net.liftweb.json.{JObject, compactRender}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
 @Singleton
 class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider: MetricsActorProvider) extends LazyLogging
@@ -17,19 +21,93 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
   with PostgresUtils
   with MetricsSupport {
 
-  implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
+  implicit val ec : ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
 
-  def subjectAccessRequestById(id: String): ApiResponse[Option[Int]] = withMetricsFE("user.subjectAccessRequestById", id) {
-    val sql =
-      sql"""
-           |SELECT id FROM users
-           |WHERE id=${id}
-           |LIMIT 1
-             """.stripMargin
-    readOnly { implicit session =>
-      val userId = sql.map(rs => Json.parse(rs.string(1)).as[Int]).single.apply
-      userId
-    }(logFailure("Failed to get users SAR"))
+  def subjectAccessRequestById(id: String): ApiResponse[List[String]] = withMetricsFE("user.subjectAccessRequestById", id) {
+    (for {
+      accessTokens <- EitherT(getAccessTokens(id))
+      guestRegistrationRequest <- EitherT(getGuestRegistrationsRequests(id))
+      passwordHashes <- EitherT(getPasswordHashes(id))
+      passwordResetRequests <- EitherT(getPasswordResetRequests(id))
+      reservedEmails <- EitherT(getReservedEmails(id))
+      syncedPrefs <- EitherT(getSyncedPrefs(id))
+      user <- EitherT(getUser(id))
+    } yield List(accessTokens, guestRegistrationRequest, passwordHashes, passwordResetRequests, reservedEmails, syncedPrefs, user).flatten).run
   }
 
+  def executeSql(sql: SQL[Nothing, NoExtractor], table: String) = readOnly { implicit session =>
+    sql.map(rs => rs.string(1)).single.apply
+  }(logFailure(s"Failed to get users ${table}"))
+
+
+  def getAccessTokens(id:String) = withMetricsFE("user.getAccessToken", id) {
+    val matcher: JObject = "userId" -> id
+    val sql =
+      sql"""
+           |select jsonb_set(accesstokens.jdoc, '{hash}', '"<omitted>"'::jsonb)
+           |from accesstokens
+           |WHERE jdoc@>${compactRender(matcher)}::jsonb
+             """.stripMargin
+    executeSql(sql, "getAccessToken")
+  }
+
+  def getGuestRegistrationsRequests(id: String) = withMetricsFE("user.guestRegistrationAttempts", id) {
+    val sql =
+      sql"""
+           |select jdoc
+           |from guestregistrationrequests
+           |WHERE id=${id}
+           """.stripMargin
+    executeSql(sql, "guestRegistrationAttempts")
+  }
+
+  def getPasswordHashes(id: String) = withMetricsFE("user.passwordHashes", id) {
+    val sql =
+      sql"""
+           |select jsonb_set(jdoc, '{hash}', '"<omitted>"'::jsonb)
+           |from passwordhashes
+           |WHERE id=${id}
+           """.stripMargin
+    executeSql(sql, "passwordHashes")
+  }
+
+  def getPasswordResetRequests(id: String) = withMetricsFE("user.passwordResetRequests", id) {
+    val sql =
+      sql"""
+           |select jdoc
+           |from passwordhashes
+           |WHERE id=${id}
+           """.stripMargin
+    executeSql(sql, "passwordResetRequests")
+  }
+
+  def getReservedEmails(id: String) = withMetricsFE("user.reservedEmails") {
+    val sql =
+      sql"""
+           |select jdoc
+           |from reservedemails
+           |WHERE id=${id}
+           """.stripMargin
+    executeSql(sql, "reservedEmails")
+  }
+
+  def getSyncedPrefs(id: String) = withMetricsFE("user.syncedPrefs") {
+    val sql =
+      sql"""
+           |select jdoc
+           |from syncedPrefs
+           |WHERE id=${id}
+           """.stripMargin
+    executeSql(sql, "syncedPrefs")
+  }
+
+  def getUser(id: String) = withMetricsFE("user.findById") {
+    val sql =
+      sql"""
+           |select jdoc
+           |from users
+           |WHERE id=${id}
+           """.stripMargin
+    executeSql(sql, "findById")
+  }
 }

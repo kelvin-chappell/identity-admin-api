@@ -304,11 +304,7 @@ import scalaz.{-\/, EitherT, \/-}
     }).run
   }
 
-  def getSubjectAccessRequest(id: String): ApiResponse[Option[Int]] = {
-    (for {
-      id <- EitherT(postgresSubjectAccessRequestrepository.subjectAccessRequestById(id))
-    } yield {
-      id
-    }).run
+  def getSubjectAccessRequest(id: String): ApiResponse[List[String]] = {
+    postgresSubjectAccessRequestrepository.subjectAccessRequestById(id)
   }
 }

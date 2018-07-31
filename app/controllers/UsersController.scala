@@ -240,12 +240,13 @@ import java.nio.file.Files
   def userSubjectAccessRequest(id: String) = auth.async { implicit request =>
     logger.info(s"Getting subject access request for user with id: $id")
     withMetricsF("userSubjectAccessRequest") {
-      val userSarResponse = EitherT(userService.getSubjectAccessRequest(id))
+      val userSarResponse = userService.getSubjectAccessRequest(id)
 
-      userSarResponse.run.map {
+      userSarResponse.map {
         case \/-(result) => {
+
           val fileToSend = Files.createTempFile(s"sar-$id", ".txt").toFile
-          new PrintWriter(fileToSend) { write(result.toString) }.close()
+          new PrintWriter(fileToSend) { result.foreach(write) }.close()
           Ok.sendFile(fileToSend, onClose = () => { fileToSend.delete() })
         }
         case -\/(error) => InternalServerError(error)
