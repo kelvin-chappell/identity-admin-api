@@ -3,7 +3,7 @@ package services
 import actors.{EventPublishingActorProvider, MetricsActorProviderStub}
 import akka.actor.ActorSystem
 import models.client._
-import models.database.postgres.{PostgresDeletedUserRepository, PostgresReservedUsernameRepository, PostgresUserRepository}
+import models.database.postgres.{PostgresDeletedUserRepository, PostgresReservedUsernameRepository, PostgresSubjectAccessRequestRepository, PostgresUserRepository}
 import util.UserConverter._
 import org.mockito.Mockito
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, WordSpec}
@@ -32,6 +32,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
   val pgDeletedUserRepo = mock[PostgresDeletedUserRepository]
   val pgUserRepo = mock[PostgresUserRepository]
   val pgReservedUsernameRepo = mock[PostgresReservedUsernameRepository]
+  val postgresSubjectAccessRequestRepository = mock[PostgresSubjectAccessRequestRepository]
   implicit val actorSystem = ActorSystem()
 
   override def afterAll: Unit = {
@@ -41,7 +42,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
   val service =
     spy(new UserService(identityApiClient,
       eventPublishingActorProvider, salesforceService, salesforceIntegration, madgexService, exactTargetService,
-      discussionService, pgDeletedUserRepo, pgReservedUsernameRepo, pgUserRepo, MetricsActorProviderStub))
+      discussionService, pgDeletedUserRepo, pgReservedUsernameRepo, pgUserRepo, postgresSubjectAccessRequestRepository, MetricsActorProviderStub))
 
   before {
     Mockito.reset(identityApiClient, eventPublishingActorProvider, service, madgexService, pgDeletedUserRepo, pgReservedUsernameRepo, pgUserRepo)

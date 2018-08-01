@@ -29,7 +29,7 @@ import scalaz.{-\/, EitherT, \/-}
     postgresDeletedUserRepository: PostgresDeletedUserRepository,
     postgresReservedUsernameRepository: PostgresReservedUsernameRepository,
     postgresUsersReadRepository: PostgresUserRepository,
-    postgresSubjectAccessRequestrepository: PostgresSubjectAccessRequestRepository,
+    postgresSubjectAccessRequestRepository: PostgresSubjectAccessRequestRepository,
     val metricsActorProvider: MetricsActorProvider)
     (implicit ec: ExecutionContext) extends LazyLogging with MetricsSupport {
 
@@ -305,6 +305,6 @@ import scalaz.{-\/, EitherT, \/-}
   }
 
   def getSubjectAccessRequest(id: String): ApiResponse[List[String]] = {
-    postgresSubjectAccessRequestrepository.subjectAccessRequestById(id)
+    postgresSubjectAccessRequestRepository.subjectAccessRequestById(id)
   }
 }
