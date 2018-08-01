@@ -1,7 +1,6 @@
 package controllers
 
 import java.io.PrintWriter
-
 import models.client.ClientJsonFormats._
 import javax.inject.{Inject, Singleton}
 import actions.{AuthenticatedAction, IdentityUserAction, OrphanUserAction}
@@ -25,10 +24,7 @@ import scalaz.syntax.apply._
 import scalaz.syntax.std.boolean._
 import models.client._
 import models.client.ApiError._
-
-import scala.tools.nsc.io.File
 import java.nio.file.Files
-//import play.api.libs.Files.TemporaryFile
 
 @Singleton class UsersController @Inject()(
     cc: ControllerComponents,
