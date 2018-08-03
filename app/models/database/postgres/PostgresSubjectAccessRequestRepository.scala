@@ -64,7 +64,7 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
   def getPasswordHashes(id: String) = withMetricsFE("user.passwordHashes", id) {
     val sql =
       sql"""
-           |select jsonb_set(passwordhashes.jdoc, '{hash}', '"<omitted>"'::jsonb)
+           |select jdoc
            |from passwordhashes
            |WHERE id=${id}
            """.stripMargin
