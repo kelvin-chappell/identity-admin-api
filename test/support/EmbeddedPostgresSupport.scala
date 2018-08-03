@@ -38,6 +38,22 @@ trait EmbeddedPostgresSupport extends BeforeAndAfterAll {
          """.stripMargin
       SQL(create).update().apply()
     }
+
+    val newsletterSubscriptionTable = """
+      |DROP TABLE IF EXISTS newsletter_subscriptions;
+      |CREATE TABLE IF NOT EXISTS newsletter_subscriptions(
+      |  user_id VARCHAR NOT NULL REFERENCES users(id),
+      |  newsletter_name VARCHAR NOT NULL,
+      |  subscribed BOOLEAN NOT NULL,
+      |  last_updated TIMESTAMP NOT NULL,
+      |  PRIMARY KEY(user_id, newsletter_name)
+      |);
+    """.stripMargin
+    SQL(newsletterSubscriptionTable).update().apply()
+
+    val userTableColumn =
+      "ALTER TABLE USERS ADD COLUMN editorial_unit_subscribed BOOLEAN DEFAULT NULL"
+    SQL(userTableColumn).update().apply()
   }
 
   override def beforeAll: Unit = {

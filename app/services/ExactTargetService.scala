@@ -26,8 +26,14 @@ import scala.util.{Failure, Success, Try}
   /**
     * Unsubscribe this subscriber from all current and future subscriber lists.
     */
-  def unsubscribeFromAllLists(email: String): ApiResponse[Unit] =
-    EitherT(updateSubscriptionStatus(email, ETSubscriber.Status.UNSUBSCRIBED, etClientEditorial)).run
+  def unsubscribeFromAllLists(email: String): ApiResponse[Unit] = {
+    val result = for {
+      update <- EitherT(updateSubscriptionStatus(email, ETSubscriber.Status.UNSUBSCRIBED, etClientEditorial))
+      _ <- EitherT(postgresUsersReadRepository.setEditorialUnitSubscribed(email, subscribed = false))
+    } yield update
+
+    result.run
+  }
 
   /**
     * Activates subscriber in both Admin and Editorial business units.
@@ -40,7 +46,8 @@ import scala.util.{Failure, Success, Try}
     (for {
       _ <- adminStatusUpdateF
       _ <- editorialStatusUpdateF
-    } yield {}).run
+      _ <- EitherT(postgresUsersReadRepository.setEditorialUnitSubscribed(email, subscribed = true))
+    } yield ()).run
   }
 
   // FIXME: Mimics IDAPI behaviour where it creates a new subscriber instead of just updating email on existing one

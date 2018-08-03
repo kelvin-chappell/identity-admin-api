@@ -8,7 +8,7 @@ import models.database.postgres.PostgresUserRepository
 import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Milliseconds, Seconds, Span}
-import org.scalatest.{BeforeAndAfterAll, DoNotDiscover, Matchers, WordSpecLike}
+import org.scalatest._
 import play.api.libs.json.Json
 import scalikejdbc._
 import support.{EmbeddedPostgresSupport, PgTestUtils}
@@ -47,6 +47,9 @@ class PostgresUserRepositoryTest extends WordSpecLike
       ).some,
       statusFields = StatusFields().some
     )
+
+    execSql(sql"DELETE FROM users")
+
     val userJson = Json.stringify(Json.toJson(testUser))
     execSql(
       sql"""
@@ -157,6 +160,31 @@ class PostgresUserRepositoryTest extends WordSpecLike
           .flatMap(_ => repo.findById("1234"))
       ) {
         case \/-(Some(updatedUser)) => updatedUser.status.userEmailValidated shouldBe Some(false)
+        case _ => fail()
+      }
+    }
+  }
+
+  "get/set EditorialUnitSubscribed" should {
+    "behave as expected" in new TestFixture {
+      whenReady(repo.getEditorialUnitSubscribed("identitydev@guardian.co.uk")) {
+        case \/-(r) => r shouldBe None
+        case _ => fail()
+      }
+      whenReady(repo.setEditorialUnitSubscribed("identitydev@guardian.co.uk", subscribed = false)) {
+        case \/-(r) => r shouldBe 1
+        case _ => fail()
+      }
+      whenReady(repo.getEditorialUnitSubscribed("identitydev@guardian.co.uk")) {
+        case \/-(r) => r shouldBe Some(false)
+        case _ => fail()
+      }
+      whenReady(repo.setEditorialUnitSubscribed("identitydev@guardian.co.uk", subscribed = true)) {
+        case \/-(r) => r shouldBe 1
+        case _ => fail()
+      }
+      whenReady(repo.getEditorialUnitSubscribed("identitydev@guardian.co.uk")) {
+        case \/-(r) => r shouldBe Some(true)
         case _ => fail()
       }
     }
