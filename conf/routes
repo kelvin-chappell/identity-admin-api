@@ -2,6 +2,7 @@ GET        /healthcheck                             @controllers.HealthCheckCont
 GET        /authHealthcheck                         @controllers.HealthCheckController.authHealthCheck
 
 GET        /v1/user/search                          @controllers.UsersController.search(query: String, limit: Option[Int], offset: Option[Int])
+GET        /v1/user/:id/sar                         @controllers.UsersController.userSubjectAccessRequest(id: String)
 GET        /v1/user/:id                             @controllers.UsersController.findById(id: String)
 GET        /v1/user/:id/salesforce                  @controllers.UsersController.findSalesforceDetails(id: String)
 GET        /v1/user/:id/has-commented               @controllers.UsersController.hasCommented(id: String)
