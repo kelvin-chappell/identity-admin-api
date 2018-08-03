@@ -44,7 +44,7 @@ trait EmbeddedPostgresSupport extends BeforeAndAfterAll {
     super.beforeAll()
     val url = startPostgres()
     ConnectionPool.singleton(url, "username", "password")
-    createTables("users", "reservedusernames", "reservedemails")
+    createTables("users", "reservedusernames", "reservedemails", "accesstokens", "guestregistrationrequests", "syncedPrefs", "reservedemails", "passwordhashes", "passwordhashes")
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         stopPostgres()
