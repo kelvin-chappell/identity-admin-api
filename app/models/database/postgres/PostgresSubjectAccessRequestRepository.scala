@@ -32,11 +32,11 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
       reservedEmails <- EitherT(getReservedEmails(id))
       syncedPrefs <- EitherT(getSyncedPrefs(id))
       user <- EitherT(getUser(id))
-    } yield List(accessTokens, guestRegistrationRequest, passwordHashes, passwordResetRequests, reservedEmails, syncedPrefs, user).flatten).run
+    } yield accessTokens ++ guestRegistrationRequest ++ passwordHashes ++ passwordResetRequests ++ reservedEmails ++ syncedPrefs ++ user).run
   }
 
   def executeSql(sql: SQL[Nothing, NoExtractor], table: String) = readOnly { implicit session =>
-    sql.map(rs => rs.string(1)).single.apply
+    sql.map(rs => rs.string(1)).list.apply
   }(logFailure(s"Failed to get users ${table}"))
 
 
@@ -64,7 +64,7 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
   def getPasswordHashes(id: String) = withMetricsFE("user.passwordHashes", id) {
     val sql =
       sql"""
-           |select jsonb_set(jdoc, '{hash}', '"<omitted>"'::jsonb)
+           |select jsonb_set(passwordhashes.jdoc, '{hash}', '"<omitted>"'::jsonb)
            |from passwordhashes
            |WHERE id=${id}
            """.stripMargin
