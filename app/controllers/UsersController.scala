@@ -240,7 +240,7 @@ import java.nio.file.Files
 
       userSarResponse.map {
         case \/-(result) => {
-          val fileToSend = Files.createTempFile(s"sar-$id", ".txt").toFile
+          val fileToSend = Files.createTempFile(s"sar-$id-", ".txt").toFile
           val pw = new PrintWriter(fileToSend)
           result.foreach(pw.write)
           pw.close()

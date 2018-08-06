@@ -44,7 +44,7 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
     val matcher: JObject = "userId" -> id
     val sql =
       sql"""
-           |select jsonb_set(accesstokens.jdoc, '{hash}', '"<omitted>"'::jsonb)
+           |select jsonb_pretty(jsonb_set(accesstokens.jdoc, '{hash}', '"<omitted>"'::jsonb))
            |from accesstokens
            |WHERE jdoc@>${compactRender(matcher)}::jsonb
              """.stripMargin
@@ -54,7 +54,7 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
   def getGuestRegistrationsRequests(id: String) = withMetricsFE("user.guestRegistrationAttempts", id) {
     val sql =
       sql"""
-           |select jdoc
+           |select jsonb_pretty(jdoc)
            |from guestregistrationrequests
            |WHERE id=${id}
            """.stripMargin
@@ -64,7 +64,7 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
   def getPasswordHashes(id: String) = withMetricsFE("user.passwordHashes", id) {
     val sql =
       sql"""
-           |select jsonb_set(passwordhashes.jdoc, '{hash}', '"<omitted>"'::jsonb)
+           |select jsonb_pretty(jsonb_set(passwordhashes.jdoc, '{hash}', '"<omitted>"'::jsonb))
            |from passwordhashes
            |WHERE id=${id}
            """.stripMargin
@@ -74,7 +74,7 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
   def getPasswordResetRequests(id: String) = withMetricsFE("user.passwordResetRequests", id) {
     val sql =
       sql"""
-           |select jdoc
+           |select jsonb_pretty(jdoc)
            |from passwordresetrequests
            |WHERE id=${id}
            """.stripMargin
@@ -84,7 +84,7 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
   def getReservedEmails(id: String) = withMetricsFE("user.reservedEmails") {
     val sql =
       sql"""
-           |select jdoc
+           |select jsonb_pretty(jdoc)
            |from reservedemails
            |WHERE id=${id}
            """.stripMargin
@@ -94,7 +94,7 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
   def getSyncedPrefs(id: String) = withMetricsFE("user.syncedPrefs") {
     val sql =
       sql"""
-           |select jdoc
+           |select jsonb_pretty(jdoc)
            |from syncedPrefs
            |WHERE id=${id}
            """.stripMargin
@@ -104,7 +104,7 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
   def getUser(id: String) = withMetricsFE("user.findById") {
     val sql =
       sql"""
-           |select jdoc
+           |select jsonb_pretty(jdoc)
            |from users
            |WHERE id=${id}
            """.stripMargin
