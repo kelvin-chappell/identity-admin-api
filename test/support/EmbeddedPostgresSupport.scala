@@ -50,10 +50,6 @@ trait EmbeddedPostgresSupport extends BeforeAndAfterAll {
       |);
     """.stripMargin
     SQL(newsletterSubscriptionTable).update().apply()
-
-    val userTableColumn =
-      "ALTER TABLE USERS ADD COLUMN editorial_unit_subscribed BOOLEAN DEFAULT NULL"
-    SQL(userTableColumn).update().apply()
   }
 
   override def beforeAll: Unit = {
@@ -84,6 +80,11 @@ trait PgTestUtils extends PostgresJsonFormats {
   def select[T](sql: SQL[T, HasExtractor]): Option[T] =
     DB.localTx { implicit session =>
       sql.single().apply()
+    }
+
+  def selectAll[T](sql: SQL[T, HasExtractor]): List[T] =
+    DB.localTx { implicit session =>
+      sql.list().apply()
     }
 
 }

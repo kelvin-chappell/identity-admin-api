@@ -47,7 +47,7 @@ class PostgresUserRepositoryTest extends WordSpecLike
       ).some,
       statusFields = StatusFields().some
     )
-
+    execSql(sql"delete from newsletter_subscriptions")
     execSql(sql"DELETE FROM users")
 
     val userJson = Json.stringify(Json.toJson(testUser))
@@ -164,15 +164,4 @@ class PostgresUserRepositoryTest extends WordSpecLike
       }
     }
   }
-
-  "get/set EditorialUnitSubscribed" should {
-    "behave as expected" in new TestFixture {
-      whenReady(repo.getEditorialUnitSubscribed("identitydev@guardian.co.uk"))(_ shouldBe \/-(None))
-      whenReady(repo.setEditorialUnitSubscribed("identitydev@guardian.co.uk", subscribed = false))(_ shouldBe \/-(1))
-      whenReady(repo.getEditorialUnitSubscribed("identitydev@guardian.co.uk"))(_ shouldBe \/-(Some(false)))
-      whenReady(repo.setEditorialUnitSubscribed("identitydev@guardian.co.uk", subscribed = true)) (_ shouldBe \/-(1))
-      whenReady(repo.getEditorialUnitSubscribed("identitydev@guardian.co.uk"))(_ shouldBe \/-(Some(true)))
-    }
-  }
-
 }

@@ -102,19 +102,4 @@ class PostgresUserRepository @Inject()(val metricsActorProvider: MetricsActorPro
     }(logFailure(s"Failed to update email validated status for user $email"))
   }
 
-  def setEditorialUnitSubscribed(emailAddress: String, subscribed: Boolean): ApiResponse[Int] = withMetricsFE("user.setEditorialUnitSubscribed") {
-    val update = sql"update users set editorial_unit_subscribed = $subscribed where jdoc@>${createGinSearchJson("searchFields", "emailAddress", emailAddress)}::jsonb"
-    localTx { implicit s =>
-      update.update()()
-    }(logFailure(s"Failed to setEditorialUnitSubscribed for $emailAddress $subscribed"))
-  }
-
-  def getEditorialUnitSubscribed(emailAddress: String): ApiResponse[Option[Boolean]] = withMetricsFE("user.getEditorialUnitSubscribed") {
-    val query = sql"select editorial_unit_subscribed from users where jdoc@>${createGinSearchJson("searchFields", "emailAddress", emailAddress)}::jsonb limit 1"
-
-    readOnly { implicit s =>
-      query.map(_.booleanOpt("editorial_unit_subscribed")).single()().flatten
-    } (logFailure(s"failed to getEditorialUnitSubscribed $emailAddress"))
-  }
-
 }

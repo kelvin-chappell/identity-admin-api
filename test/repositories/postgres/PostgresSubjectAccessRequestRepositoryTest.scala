@@ -30,7 +30,9 @@ class PostgresSubjectAccessRequestRepositoryTest extends WordSpecLike
 
     val repo = new PostgresSubjectAccessRequestRepository(MetricsActorProviderStub)
     implicit val ec = repo.ec
-    execSql(sql"truncate table users, accesstokens")
+    execSql(sql"delete from newsletter_subscriptions")
+    execSql(sql"delete from users")
+    execSql(sql"delete from accesstokens")
 
     val testUser = IdentityUser(
       "identitydev@guardian.co.uk", "1234",
