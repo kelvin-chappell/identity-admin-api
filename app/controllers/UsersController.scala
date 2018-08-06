@@ -242,7 +242,7 @@ import java.nio.file.Files
         case \/-(result) => {
           val fileToSend = Files.createTempFile(s"sar-$id-", ".txt").toFile
           val pw = new PrintWriter(fileToSend)
-          result.foreach(pw.write)
+          result.foreach(line => pw.write(line + "\n"))
           pw.close()
           Ok.sendFile(fileToSend, onClose = () => { fileToSend.delete() })
         }
