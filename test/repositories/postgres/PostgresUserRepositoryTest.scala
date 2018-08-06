@@ -133,6 +133,12 @@ class PostgresUserRepositoryTest extends WordSpecLike
     }
   }
 
+  "UserReadRepository#findByEmail" should {
+    "find a user by email" in new TestFixture {
+      whenReady(repo.findByEmail("identitydev@guardian.co.uk"))(_.toOption.get.get.id shouldBe "1234")
+    }
+  }
+
   "PostgresUserRepository#update" should {
     "Apply the updates to the user" in new TestFixture {
       val displayNameUpdate = Some("eric_b_for_president")

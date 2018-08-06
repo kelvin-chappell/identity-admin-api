@@ -64,6 +64,20 @@ class PostgresUserRepository @Inject()(val metricsActorProvider: MetricsActorPro
     }(logFailure("Failed find user by id"))
   }
 
+  def findByEmail(emailAddress: String): ApiResponse[Option[User]] = withMetricsFE("user.findByEmail", emailAddress) {
+    val sql =
+      sql"""
+           |SELECT jdoc FROM users
+           |WHERE jdoc@>${createGinSearchJson("searchFields", "emailAddress", emailAddress)}::jsonb
+           |order by jdoc#>'{primaryEmailAddress}'
+           |LIMIT 1
+           |""".stripMargin
+    readOnly { implicit session =>
+      val user = sql.map(rs => Json.parse(rs.string(1)).as[IdentityUser]).single.apply
+      user.map(User.apply)
+    }(logFailure("Failed find user by emailAddress"))
+  }
+
   def update(user: User, userUpdateRequest: UserUpdateRequest): ApiResponse[User] = withMetricsFE("user.update", s"$user $userUpdateRequest") {
     val persistedUser = DB.readOnly { implicit s =>
       sql"select jdoc from users where id=${user.id} limit 1"

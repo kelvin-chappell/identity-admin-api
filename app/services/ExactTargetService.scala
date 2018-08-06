@@ -29,9 +29,17 @@ import scala.util.{Failure, Success, Try}
     * Unsubscribe this subscriber from all current and future subscriber lists.
     */
   def unsubscribeFromAllLists(email: String): ApiResponse[Unit] = {
+
+    def unsubscribeAllMaybe(userId: Option[String]) = {
+      userId
+        .map(id => EitherT(newsletterSubscriptionsRepository.unsubscribeAll(id)))
+        .getOrElse(EitherT(Future.successful(\/-(0))))
+    }
+
     val result = for {
       _ <- unsubscribeAllIndividual(email)
-      _ <- EitherT(newsletterSubscriptionsRepository.unsubscribeAll(email))
+      user <- EitherT(postgresUsersReadRepository.findByEmail(email))
+      _ <- unsubscribeAllMaybe(user.map(_.id))
       update <- EitherT(updateSubscriptionStatus(email, ETSubscriber.Status.UNSUBSCRIBED, etClientEditorial))
     } yield update
 
