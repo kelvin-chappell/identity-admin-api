@@ -30,16 +30,16 @@ import scala.util.{Failure, Success, Try}
     */
   def unsubscribeFromAllLists(email: String): ApiResponse[Unit] = {
 
-    def unsubscribeAllMaybe(userId: Option[String]) = {
+    def unsubscribeAllPostgres(userId: Option[String]) = {
       userId
         .map(id => EitherT(newsletterSubscriptionsRepository.unsubscribeAll(id)))
-        .getOrElse(EitherT(Future.successful(\/-(0))))
+        .getOrElse(EitherT[Future, ApiError, Int](Future.successful(\/-(0))))
     }
 
     val result = for {
-      _ <- unsubscribeAllIndividual(email)
+      _ <- unsubscribedIndividuallyFromET(email)
       user <- EitherT(postgresUsersReadRepository.findByEmail(email))
-      _ <- unsubscribeAllMaybe(user.map(_.id))
+      _ <- unsubscribeAllPostgres(user.map(_.id))
       update <- EitherT(updateSubscriptionStatus(email, ETSubscriber.Status.UNSUBSCRIBED, etClientEditorial))
     } yield update
 
@@ -398,7 +398,7 @@ import scala.util.{Failure, Success, Try}
     handleCreateResponse(soapSubscriberUpdate(subscriber), "Failed to transfer subscriptions")
   }
 
-  private def unsubscribeAllIndividual(email: String) = {
+  private def unsubscribedIndividuallyFromET(email: String) = {
     val result = for {
       newsLetters <- OptionT(EitherT(newslettersSubscriptionByEmail(email)))
       ids = newsLetters.list
