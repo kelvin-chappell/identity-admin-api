@@ -10,6 +10,7 @@ import org.scalatest.concurrent.ScalaFutures
 import support.PgTestUtils
 import scalikejdbc._
 import play.api.libs.json.Json
+import scalaz.\/-
 import scalaz.syntax.std.option._
 
 @DoNotDiscover
@@ -98,6 +99,28 @@ class PostgresSubjectAccessRequestRepositoryTest extends WordSpecLike
       whenReady(repo.subjectAccessRequestById("1234")) { result =>
         result.map(_.length shouldEqual(2))
       }
+    }
+
+    "getNewsletterSubscriptions" in new TestFixture {
+      execSql(sql"INSERT INTO users values ('12345', '{}')")
+      execSql(sql"INSERT INTO newsletter_subscriptions values ('1234', 'uk-today', true, '2017-01-01')")
+      execSql(sql"INSERT INTO newsletter_subscriptions values ('12345', 'au-today', true, '2017-01-01')")
+      execSql(sql"INSERT INTO newsletter_subscriptions values ('1234', 'us-today', false, '2017-01-01')")
+
+      whenReady(repo.getNewsletterSubscriptions("1234")) {_ shouldBe \/-(List(
+        """|{
+           |  "userId" : "1234",
+           |  "newsLetterName" : "uk-today",
+           |  "subscribed" : true,
+           |  "lastUpdated" : "2017-01-01 00:00:00.0"
+           |}""".stripMargin,
+        """|{
+           |  "userId" : "1234",
+           |  "newsLetterName" : "us-today",
+           |  "subscribed" : false,
+           |  "lastUpdated" : "2017-01-01 00:00:00.0"
+           |}""".stripMargin
+      ))}
     }
   }
 }
