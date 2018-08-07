@@ -8,7 +8,7 @@ import models.database.postgres.PostgresUserRepository
 import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Milliseconds, Seconds, Span}
-import org.scalatest.{BeforeAndAfterAll, DoNotDiscover, Matchers, WordSpecLike}
+import org.scalatest._
 import play.api.libs.json.Json
 import scalikejdbc._
 import support.{EmbeddedPostgresSupport, PgTestUtils}
@@ -47,6 +47,9 @@ class PostgresUserRepositoryTest extends WordSpecLike
       ).some,
       statusFields = StatusFields().some
     )
+    execSql(sql"delete from newsletter_subscriptions")
+    execSql(sql"DELETE FROM users")
+
     val userJson = Json.stringify(Json.toJson(testUser))
     execSql(
       sql"""
@@ -130,6 +133,12 @@ class PostgresUserRepositoryTest extends WordSpecLike
     }
   }
 
+  "UserReadRepository#findByEmail" should {
+    "find a user by email" in new TestFixture {
+      whenReady(repo.findByEmail("identitydev@guardian.co.uk"))(_.toOption.get.get.id shouldBe "1234")
+    }
+  }
+
   "PostgresUserRepository#update" should {
     "Apply the updates to the user" in new TestFixture {
       val displayNameUpdate = Some("eric_b_for_president")
@@ -161,5 +170,4 @@ class PostgresUserRepositoryTest extends WordSpecLike
       }
     }
   }
-
 }

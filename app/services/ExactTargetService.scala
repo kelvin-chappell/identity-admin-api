@@ -1,6 +1,6 @@
 package services
 
-import akka.actor.ActorSystem
+import java.util.concurrent.Executors
 import com.exacttarget.fuelsdk._
 import com.exacttarget.fuelsdk.internal.Options.SaveOptions
 import com.exacttarget.fuelsdk.internal.{CreateOptions, CreateRequest, CreateResponse, SaveAction, SaveOption, Subscriber, SubscriberList, SubscriberStatus}
@@ -8,26 +8,43 @@ import com.typesafe.scalalogging.LazyLogging
 import configuration.Config
 import javax.inject.{Inject, Singleton}
 import models.client._
-import models.database.postgres.PostgresUserRepository
+import models.database.postgres.{PostgresNewsletterSubscriptionsRepository, PostgresUserRepository}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import scalaz.std.scalaFuture._
 import scalaz.{-\/, EitherT, OptionT, \/, \/-}
+
 import scala.collection.JavaConversions._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-@Singleton class ExactTargetService @Inject()(postgresUsersReadRepository: PostgresUserRepository)
-                                             (implicit ec: ExecutionContext, actorSystem: ActorSystem) extends LazyLogging {
+@Singleton class ExactTargetService @Inject()(postgresUsersReadRepository: PostgresUserRepository,
+                                              newsletterSubscriptionsRepository: PostgresNewsletterSubscriptionsRepository) extends LazyLogging {
 
+  implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
   private val dateTimeFormatterUSA = DateTimeFormat.forPattern("MM/dd/yyyy h:mm:ss a")
   private val dateTimeFormatterGBR = DateTimeFormat.forPattern("dd/MM/yyyy h:mm:ss a")
 
   /**
     * Unsubscribe this subscriber from all current and future subscriber lists.
     */
-  def unsubscribeFromAllLists(email: String): ApiResponse[Unit] =
-    EitherT(updateSubscriptionStatus(email, ETSubscriber.Status.UNSUBSCRIBED, etClientEditorial)).run
+  def unsubscribeFromAllLists(email: String): ApiResponse[Unit] = {
+
+    def unsubscribeAllPostgres(userId: Option[String]) = {
+      userId
+        .map(id => EitherT(newsletterSubscriptionsRepository.unsubscribeAll(id)))
+        .getOrElse(EitherT[Future, ApiError, Int](Future.successful(\/-(0))))
+    }
+
+    val result = for {
+      _ <- unsubscribedIndividuallyFromET(email)
+      user <- EitherT(postgresUsersReadRepository.findByEmail(email))
+      _ <- unsubscribeAllPostgres(user.map(_.id))
+      update <- EitherT(updateSubscriptionStatus(email, ETSubscriber.Status.UNSUBSCRIBED, etClientEditorial))
+    } yield update
+
+    result.run
+  }
 
   /**
     * Activates subscriber in both Admin and Editorial business units.
@@ -40,7 +57,7 @@ import scala.util.{Failure, Success, Try}
     (for {
       _ <- adminStatusUpdateF
       _ <- editorialStatusUpdateF
-    } yield {}).run
+    } yield ()).run
   }
 
   // FIXME: Mimics IDAPI behaviour where it creates a new subscriber instead of just updating email on existing one
@@ -375,8 +392,39 @@ import scala.util.{Failure, Success, Try}
       val subscriberList = new SubscriberList
       subscriberList.setId(listId.toInt)
       subscriberList.setStatus(SubscriberStatus.ACTIVE)
-      subscriber.getLists().add(subscriberList)
+      subscriber.getLists.add(subscriberList)
     }
+
+    handleCreateResponse(soapSubscriberUpdate(subscriber), "Failed to transfer subscriptions")
+  }
+
+  private def unsubscribedIndividuallyFromET(email: String) = {
+    val result = for {
+      newsLetters <- OptionT(EitherT(newslettersSubscriptionByEmail(email)))
+      ids = newsLetters.list
+      result <- OptionT(EitherT(unsubscribeFromIds(email, ids).map(_.map(Option.apply))))
+    } yield result
+    result.run
+  }
+
+  private def unsubscribeFromIds(email: String, listIds: List[String]): ApiResponse[Unit] = Future {
+
+    val subscriber = new Subscriber
+    subscriber.setSubscriberKey(email)
+    subscriber.setEmailAddress(email)
+
+    listIds.foreach { listId =>
+      val subscriberList = new SubscriberList
+      subscriberList.setId(listId.toInt)
+      subscriberList.setStatus(SubscriberStatus.UNSUBSCRIBED)
+      subscriber.getLists.add(subscriberList)
+    }
+
+    handleCreateResponse(soapSubscriberUpdate(subscriber), "Failed to unsubscribeFromIds")
+  }
+
+  private def soapSubscriberUpdate(subscriber: Subscriber) = {
+    val soapClient = etClientEditorial.getSoapConnection.getSoap
 
     val createOptions = new CreateOptions
     val saveOption = new SaveOption
@@ -389,10 +437,7 @@ import scala.util.{Failure, Success, Try}
     val createRequest = new CreateRequest
     createRequest.getObjects.add(subscriber)
     createRequest.setOptions(createOptions)
-
-
-    val response = soapClient.create(createRequest)
-    handleCreateResponse(response, "Failed to transfer subscriptions")
+    soapClient.create(createRequest)
   }
 
   private lazy val etClientAdmin = {

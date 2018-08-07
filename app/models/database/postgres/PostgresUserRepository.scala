@@ -22,22 +22,24 @@ class PostgresUserRepository @Inject()(val metricsActorProvider: MetricsActorPro
 
   implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
 
+  private def createGinSearchJson(fieldName: String, innerFieldName: String, value: String) =
+      Json.toJson(Map(fieldName -> Map(innerFieldName -> value.toLowerCase)))(Writes.mapWrites).toString // Writes.mapWrites has to be explicit because of MongoJsonFormats.objectMapFormat
+
   def search(queryValue: String, limit: Option[Int] = None, offset: Option[Int] = None): ApiResponse[SearchResponse] = withMetricsFE("user.search", s"$queryValue $limit $offset") {
-    def createGinSearchJson(fieldName: String, innerFieldName: String) =
-      Json.toJson(Map(fieldName -> Map(innerFieldName -> queryValue.toLowerCase)))(Writes.mapWrites).toString // Writes.mapWrites has to be explicit because of MongoJsonFormats.objectMapFormat
+
 
     val _offset = offset.getOrElse(0)
     val _limit = limit.getOrElse(SearchValidation.maximumLimit)
     val sql =
       sql"""|SELECT jdoc, count(*) OVER() AS full_count FROM users
             |WHERE id = ${queryValue.toLowerCase}
-            |OR jdoc@>${createGinSearchJson("searchFields", "emailAddress")}::jsonb
-            |OR jdoc@>${createGinSearchJson("searchFields", "username")}::jsonb
-            |OR jdoc@>${createGinSearchJson("searchFields", "postcode")}::jsonb
-            |OR jdoc@>${createGinSearchJson("searchFields", "postcodePrefix")}::jsonb
-            |OR jdoc@>${createGinSearchJson("searchFields", "displayName")}::jsonb
-            |OR jdoc@>${createGinSearchJson("privateFields", "registrationIp")}::jsonb
-            |OR jdoc@>${createGinSearchJson("privateFields", "lastActiveIpAddress")}::jsonb
+            |OR jdoc@>${createGinSearchJson("searchFields", "emailAddress", queryValue)}::jsonb
+            |OR jdoc@>${createGinSearchJson("searchFields", "username", queryValue)}::jsonb
+            |OR jdoc@>${createGinSearchJson("searchFields", "postcode", queryValue)}::jsonb
+            |OR jdoc@>${createGinSearchJson("searchFields", "postcodePrefix", queryValue)}::jsonb
+            |OR jdoc@>${createGinSearchJson("searchFields", "displayName", queryValue)}::jsonb
+            |OR jdoc@>${createGinSearchJson("privateFields", "registrationIp", queryValue)}::jsonb
+            |OR jdoc@>${createGinSearchJson("privateFields", "lastActiveIpAddress", queryValue)}::jsonb
             |order by jdoc#>'{primaryEmailAddress}'
             |LIMIT ${_limit}
             |OFFSET ${_offset}
@@ -60,6 +62,20 @@ class PostgresUserRepository @Inject()(val metricsActorProvider: MetricsActorPro
       val user = sql.map(rs => Json.parse(rs.string(1)).as[IdentityUser]).single.apply
       user.map(User.apply)
     }(logFailure("Failed find user by id"))
+  }
+
+  def findByEmail(emailAddress: String): ApiResponse[Option[User]] = withMetricsFE("user.findByEmail", emailAddress) {
+    val sql =
+      sql"""
+           |SELECT jdoc FROM users
+           |WHERE jdoc@>${createGinSearchJson("searchFields", "emailAddress", emailAddress)}::jsonb
+           |order by jdoc#>'{primaryEmailAddress}'
+           |LIMIT 1
+           |""".stripMargin
+    readOnly { implicit session =>
+      val user = sql.map(rs => Json.parse(rs.string(1)).as[IdentityUser]).single.apply
+      user.map(User.apply)
+    }(logFailure("Failed find user by emailAddress"))
   }
 
   def update(user: User, userUpdateRequest: UserUpdateRequest): ApiResponse[User] = withMetricsFE("user.update", s"$user $userUpdateRequest") {

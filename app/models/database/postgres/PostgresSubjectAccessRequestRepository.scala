@@ -5,14 +5,16 @@ import java.util.concurrent.Executors
 import actors.metrics.{MetricsActorProvider, MetricsSupport}
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.scalalogging.LazyLogging
-import models.client.ApiResponse
+import models.client.{ApiError, ApiResponse}
 import scalaz.EitherT
 import scalikejdbc._
 import scalaz._
 import Scalaz._
+import models.database.rows.NewsletterSubscriptionRow
+import models.database.rows.NewsletterSubscriptionRow.newsletterSubscriptionRowWrites
 import net.liftweb.json.JsonDSL._
 import net.liftweb.json.{JObject, compactRender}
-
+import play.api.libs.json.Json
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
 @Singleton
@@ -32,15 +34,16 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
       reservedEmails <- EitherT(getReservedEmails(id))
       syncedPrefs <- EitherT(getSyncedPrefs(id))
       user <- EitherT(getUser(id))
-    } yield accessTokens ++ guestRegistrationRequest ++ passwordHashes ++ passwordResetRequests ++ reservedEmails ++ syncedPrefs ++ user).run
+      newsLetterSubscriptions <- EitherT(getNewsletterSubscriptions(id))
+    } yield accessTokens ++ guestRegistrationRequest ++ passwordHashes ++ passwordResetRequests ++ reservedEmails ++ syncedPrefs ++ user ++ newsLetterSubscriptions).run
   }
 
   def executeSql(sql: SQL[Nothing, NoExtractor], table: String) = readOnly { implicit session =>
     sql.map(rs => rs.string(1)).list.apply
-  }(logFailure(s"Failed to get users ${table}"))
+  }(logFailure(s"failed to run SAR on $table"))
 
 
-  def getAccessTokens(id:String) = withMetricsFE("user.getAccessToken", id) {
+  def getAccessTokens(id:String) = withMetricsFE("sar.getAccessToken", id) {
     val matcher: JObject = "userId" -> id
     val sql =
       sql"""
@@ -51,7 +54,7 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
     executeSql(sql, "getAccessToken")
   }
 
-  def getGuestRegistrationsRequests(id: String) = withMetricsFE("user.guestRegistrationAttempts", id) {
+  def getGuestRegistrationsRequests(id: String) = withMetricsFE("sar.guestRegistrationAttempts", id) {
     val sql =
       sql"""
            |select jsonb_pretty(jdoc)
@@ -61,7 +64,7 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
     executeSql(sql, "guestRegistrationAttempts")
   }
 
-  def getPasswordHashes(id: String) = withMetricsFE("user.passwordHashes", id) {
+  def getPasswordHashes(id: String) = withMetricsFE("sar.passwordHashes", id) {
     val sql =
       sql"""
            |select jsonb_pretty(jsonb_set(passwordhashes.jdoc, '{hash}', '"<omitted>"'::jsonb))
@@ -71,7 +74,7 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
     executeSql(sql, "passwordHashes")
   }
 
-  def getPasswordResetRequests(id: String) = withMetricsFE("user.passwordResetRequests", id) {
+  def getPasswordResetRequests(id: String) = withMetricsFE("sar.passwordResetRequests", id) {
     val sql =
       sql"""
            |select jsonb_pretty(jdoc)
@@ -81,7 +84,7 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
     executeSql(sql, "passwordResetRequests")
   }
 
-  def getReservedEmails(id: String) = withMetricsFE("user.reservedEmails") {
+  def getReservedEmails(id: String) = withMetricsFE("sar.reservedEmails") {
     val sql =
       sql"""
            |select jsonb_pretty(jdoc)
@@ -91,7 +94,7 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
     executeSql(sql, "reservedEmails")
   }
 
-  def getSyncedPrefs(id: String) = withMetricsFE("user.syncedPrefs") {
+  def getSyncedPrefs(id: String) = withMetricsFE("sar.syncedPrefs") {
     val sql =
       sql"""
            |select jsonb_pretty(jdoc)
@@ -101,7 +104,7 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
     executeSql(sql, "syncedPrefs")
   }
 
-  def getUser(id: String) = withMetricsFE("user.findById") {
+  def getUser(id: String) = withMetricsFE("sar.getUser") {
     val sql =
       sql"""
            |select jsonb_pretty(jdoc)
@@ -109,5 +112,14 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
            |WHERE id=${id}
            """.stripMargin
     executeSql(sql, "findById")
+  }
+
+  def getNewsletterSubscriptions(id: String) = withMetricsF("sar.getNewsletterSubscriptions") {
+    readOnly { implicit session =>
+      sql"select * from newsletter_subscriptions where user_id = $id"
+        .map(NewsletterSubscriptionRow.apply)
+        .list()()
+        .map(row => Json.prettyPrint(Json.toJson(row)))
+    }(logFailure(s"failed to get newsletter subscriptions for $id"))
   }
 }

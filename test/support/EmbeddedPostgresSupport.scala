@@ -38,6 +38,18 @@ trait EmbeddedPostgresSupport extends BeforeAndAfterAll {
          """.stripMargin
       SQL(create).update().apply()
     }
+
+    val newsletterSubscriptionTable = """
+      |DROP TABLE IF EXISTS newsletter_subscriptions;
+      |CREATE TABLE IF NOT EXISTS newsletter_subscriptions(
+      |  user_id VARCHAR NOT NULL REFERENCES users(id),
+      |  newsletter_name VARCHAR NOT NULL,
+      |  subscribed BOOLEAN NOT NULL,
+      |  last_updated TIMESTAMP NOT NULL,
+      |  PRIMARY KEY(user_id, newsletter_name)
+      |);
+    """.stripMargin
+    SQL(newsletterSubscriptionTable).update().apply()
   }
 
   override def beforeAll: Unit = {
@@ -68,6 +80,11 @@ trait PgTestUtils extends PostgresJsonFormats {
   def select[T](sql: SQL[T, HasExtractor]): Option[T] =
     DB.localTx { implicit session =>
       sql.single().apply()
+    }
+
+  def selectAll[T](sql: SQL[T, HasExtractor]): List[T] =
+    DB.localTx { implicit session =>
+      sql.list().apply()
     }
 
 }
