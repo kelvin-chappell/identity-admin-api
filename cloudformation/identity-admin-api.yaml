@@ -113,9 +113,9 @@ Mappings:
       RDSClientsSecurityGroupId: sg-ce0783b5
   CertsMap:
     CODE:
-      ssl: certificate/4a66464e-3a22-41e8-b1d2-85279cd290d3
+      ssl: certificate/9e4311d0-a8e8-4daf-96d9-8b150952ebb8
     PROD:
-      ssl: certificate/db34d5fa-95af-4674-ad9b-189a52bb37e2
+      ssl: certificate/23dc8555-b356-47a3-9a9c-9184de2317a7
   SNSMap:
     CODE:
       emailValidationChangedTopic: arn:aws:sns:eu-west-1:942464564246:CODE-TopicEmailValidationChanged
