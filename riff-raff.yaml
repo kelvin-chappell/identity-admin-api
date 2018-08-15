@@ -13,6 +13,7 @@ deployments:
 
   update-cloudformation:
     type: cloud-formation
+    app: identity-admin-api
     parameters:
       templatePath: identity-admin-api.yaml
       prependStackToCloudFormationStackName: false
