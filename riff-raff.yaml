@@ -9,7 +9,18 @@ deployments:
       bucket: identity-artifacts
       prefixStack: false
     dependencies:
+      - update-cloudformation
+
+  update-cloudformation:
+    type: cloud-formation
+    parameters:
+      cloudFormationStackName: IdentityAdminApi
+      templatePath: identity-admin-api.yaml
+      prependStackToCloudFormationStackName: false
+      cloudFormationStackByTags: false
+    dependencies:
       - update-ami
+
   update-ami:
     type: ami-cloudformation-parameter
     app: identity-admin-api
