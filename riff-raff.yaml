@@ -14,10 +14,9 @@ deployments:
   update-cloudformation:
     type: cloud-formation
     parameters:
-      cloudFormationStackName: IdentityAdminApi
       templatePath: identity-admin-api.yaml
       prependStackToCloudFormationStackName: false
-      cloudFormationStackByTags: false
+      cloudFormationStackByTags: true
     dependencies:
       - update-ami
 
