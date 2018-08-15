@@ -311,7 +311,7 @@ Resources:
             # systemd stuff
             total_mem=$(grep MemTotal /proc/meminfo | awk '{ print $2 }')
             # take into account the 500MB used by logstash
-            heap_size_in_mb=$(python -c "print int(($total_mem / 1024 - 500) * 0.6)")
+            heap_size_in_mb=$(python -c "print int(($total_mem / 1024 - 500) * 0.7)")
 
             sed -i "s/<APP>/${App}/g" /etc/systemd/system/${App}.service
             sed -i "s/<STAGE>/${Stage}/g" /etc/systemd/system/${App}.service
@@ -320,7 +320,7 @@ Resources:
 
             instanceid=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 
-            cat > /etc/logstash.conf <<__END__
+            cat > /etc/logstash/conf.d/logstash.conf <<__END__
             input {
                 stdin { }
                 file {
@@ -353,20 +353,23 @@ Resources:
               }
             }
             filter {
-                multiline {
-                    type => "app"
-                    pattern => "^\s"
-                    what => "previous"
-                  }
-                grok {
-                    type => "app"
-                    match => { "message" => "%{TIMESTAMP_ISO8601:log_time_stamp} (?<thread>[^\s]+) %{LOGLEVEL:level} %{GREEDYDATA:message}" }
-                    overwrite => [ "message" ]
+                if [type] == "app" {
+                    multiline {
+                        pattern => "^\s"
+                        what => "previous"
+                      }
                 }
-                grok {
-                    type => "access"
-                    match => { "message" => "%{TIMESTAMP_ISO8601:log_time_stamp} %{WORD:method} %{URIPATH:request_path}(?:%{URIPARAM:request_param})? %{WORD} %{WORD} %{INT:request_duration:int} %{WORD}" }
-                  }
+                if [type] == "app" {
+                    grok {
+                        match => { "message" => "%{TIMESTAMP_ISO8601:log_time_stamp} (?<thread>[^\s]+) %{LOGLEVEL:level} %{GREEDYDATA:message}" }
+                        overwrite => [ "message" ]
+                    }
+                }
+                if [type] == "access" {
+                    grok {
+                        match => { "message" => "%{TIMESTAMP_ISO8601:log_time_stamp} %{WORD:method} %{URIPATH:request_path}(?:%{URIPARAM:request_param})? %{WORD} %{WORD} %{INT:request_duration:int} %{WORD}" }
+                      }
+                }
                 date {
                     match => [ "timestamp" , "yyyy-MM-dd HH:mm:ss,SSS" ]
                 }
