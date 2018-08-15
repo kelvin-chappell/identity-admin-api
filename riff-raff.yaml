@@ -17,7 +17,6 @@ deployments:
     parameters:
       templatePath: identity-admin-api.yaml
       prependStackToCloudFormationStackName: false
-      cloudFormationStackByTags: true
     dependencies:
       - update-ami
 
