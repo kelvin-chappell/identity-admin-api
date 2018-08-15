@@ -51,7 +51,7 @@ riffRaffPackageType := (packageBin in Universal).value
 riffRaffUploadArtifactBucket := Option("riffraff-artifact")
 riffRaffUploadManifestBucket := Option("riffraff-builds")
 riffRaffManifestProjectName := s"identity:${name.value}"
-riffRaffArtifactResources ++= file("cloudformation/identity-admin-api.yaml") -> "update-cloudformation/identity-admin-api.yaml"
+riffRaffArtifactResources += file("cloudformation/identity-admin-api.yaml") -> "update-cloudformation/identity-admin-api.yaml"
 
 // *****************************
 // Command aliases
