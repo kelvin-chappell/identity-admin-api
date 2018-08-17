@@ -19,7 +19,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 @Singleton class ExactTargetService @Inject()(postgresUsersReadRepository: PostgresUserRepository,
-                                              newsletterSubscriptionsRepository: PostgresNewsletterSubscriptionsRepository) extends LazyLogging {
+                                              newsletterSubscriptionsRepository: PostgresNewsletterSubscriptionsRepository) extends CmtService with LazyLogging {
 
   implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
   private val dateTimeFormatterUSA = DateTimeFormat.forPattern("MM/dd/yyyy h:mm:ss a")
@@ -61,18 +61,19 @@ import scala.util.{Failure, Success, Try}
   }
 
   // FIXME: Mimics IDAPI behaviour where it creates a new subscriber instead of just updating email on existing one
-  def updateEmailAddress(oldEmail: String, newEmail: String): ApiResponse[_] =
-    (for {
-      subscriptions <- OptionT(EitherT(newslettersSubscriptionByEmail(oldEmail)))
-    } yield {
-      transferSubscriptions(oldEmail, newEmail, subscriptions.list)
-    }).run.run
+  def updateEmailAddress(oldEmail: String, newEmail: String): ApiResponse[Unit] = {
+    newslettersSubscriptionByEmail(oldEmail).flatMap {
+      case \/-(Some(subs)) => transferSubscriptions(oldEmail, newEmail, subs.list)
+      case \/-(None) => Future.successful(\/-(()))
+      case error: -\/[ApiError] => Future.successful(error)
+    }
+  }
 
   private def transferSubscriptions(
       oldEmail: String,
       newEmail: String,
       subscriptions: List[String]
-  ): ApiResponse[_] =
+  ): ApiResponse[Unit] =
     (for {
       _ <- EitherT(transferSubscriptionsToNewSubscriber(newEmail, subscriptions))
       _ <- EitherT(unsubscribeFromAllLists(oldEmail))
@@ -113,7 +114,7 @@ import scala.util.{Failure, Success, Try}
     *   Automation:       'All Emails Sent' 4c4ea8e4-f541-5aa7-591e-0bbcd3327ea8
     *   API Integration:  'All Emails Sent' 82e38185-322d-438b-a9f6-63f2cd37e252
     */
-  def consumerEmailsByEmail(email: String): ApiResponse[Option[ConsumerEmails]] = {
+  private def consumerEmailsByEmail(email: String): ApiResponse[Option[ConsumerEmails]] = {
 
     val recordsFromDeT: EitherT[Future, ApiError, Option[List[ETDataExtensionRow]]] =
 
@@ -157,7 +158,7 @@ import scala.util.{Failure, Success, Try}
 
    If the user exists only in the Admin Business Unit, then it returns whatever status is there.
    */
-  def status(email: String): ApiResponse[Option[String]] = {
+  private def status(email: String): ApiResponse[Option[String]] = {
     val adminSubscriberOptF = EitherT(retrieveSubscriber(email, etClientAdmin))
     val editorialSubscriberOptF = EitherT(retrieveSubscriber(email, etClientEditorial))
 
@@ -198,7 +199,7 @@ import scala.util.{Failure, Success, Try}
     }).run
   }
 
-  def subscriberByEmail(email: String): ApiResponse[Option[ExactTargetSubscriber]] = {
+  def subscriberByEmail(email: String): ApiResponse[Option[EmailSubscriptionStatus]] = {
     val statusF = EitherT(status(email))
     val newslettersF = EitherT(newslettersSubscriptionByEmail(email))
     val consumerEmailsF = EitherT(consumerEmailsByEmail(email))
@@ -210,7 +211,7 @@ import scala.util.{Failure, Success, Try}
         consumerEmailsOpt <- consumerEmailsF
       } yield {
         statusOpt match {
-          case Some(status) => Some(ExactTargetSubscriber(status, newslettersOpt, consumerEmailsOpt))
+          case Some(status) => Some(EmailSubscriptionStatus(status, newslettersOpt, consumerEmailsOpt))
           case None => None
         }
       }
@@ -218,10 +219,10 @@ import scala.util.{Failure, Success, Try}
     subByEmailT.run
   }
 
-  def subscriberByIdentityId(identityId: String): ApiResponse[Option[ExactTargetSubscriber]] =
+  def subscriberByIdentityId(identityId: String): ApiResponse[Option[EmailSubscriptionStatus]] =
     EitherT(postgresUsersReadRepository.findById(identityId)).flatMap {
       case Some(user) => EitherT(subscriberByEmail(user.email))
-      case None => EitherT.right(Future.successful(Option.empty[ExactTargetSubscriber]))
+      case None => EitherT.right(Future.successful(Option.empty[EmailSubscriptionStatus]))
     }.run
 
   def contributionsByIdentityId(identityId: String): ApiResponse[List[Contribution]] =
@@ -460,4 +461,8 @@ import scala.util.{Failure, Success, Try}
     etConf.set("clientSecret", Config.ExactTarget.Consumer.clientSecret)
     new ETClient(etConf)
   }
+
+  override def findUserSubscriptions(userId: String): ApiResponse[Option[EmailSubscriptionStatus]] = subscriberByIdentityId(userId)
+  override def unsubscribeAll(userId: String, email: String): ApiResponse[Unit] = unsubscribeFromAllLists(email)
+  override def updateEmailAddress(identityId: String, oldEmail: String, newEmail: String): ApiResponse[Unit] = updateEmailAddress(oldEmail, newEmail)
 }

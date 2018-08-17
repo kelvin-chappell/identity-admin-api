@@ -133,13 +133,13 @@ object ConsumerEmails {
   implicit val format = Json.format[ConsumerEmails]
 }
 
-case class ExactTargetSubscriber(
+case class EmailSubscriptionStatus(
   status: String,
   newsletters: Option[NewslettersSubscription],
   consumerEmails: Option[ConsumerEmails])
 
-object ExactTargetSubscriber {
-  implicit val format = Json.format[ExactTargetSubscriber]
+object EmailSubscriptionStatus {
+  implicit val format = Json.format[EmailSubscriptionStatus]
 }
 
 case class Contribution(date: String, currency: String, amount: String)
@@ -148,7 +148,7 @@ object Contribution {
   implicit val format = Json.format[Contribution]
 }
 
-case class ExactTargetDetails(exactTargetSubscriber: Option[ExactTargetSubscriber], contributions: List[Contribution])
+case class ExactTargetDetails(exactTargetSubscriber: Option[EmailSubscriptionStatus], contributions: List[Contribution])
 
 object ExactTargetDetails {
   implicit val format = Json.format[ExactTargetDetails]
@@ -242,7 +242,7 @@ case class GuardianUser(
   idapiUser: User,
   membershipDetails: Option[SalesforceSubscription] = None,
   subscriptionDetails: Option[SalesforceSubscription] = None,
-  exactTargetSubscriber: Option[ExactTargetSubscriber] = None,
+  exactTargetSubscriber: Option[EmailSubscriptionStatus] = None,
   hasCommented: Boolean = false,
   deleted: Boolean = false,
   orphan: Boolean = false,

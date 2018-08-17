@@ -192,7 +192,7 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
 
   "findExactTargetDetails" should {
     "find a user's exact target details" in {
-      val exactTargetSub = ExactTargetSubscriber("status", None, None)
+      val exactTargetSub = EmailSubscriptionStatus("status", None, None)
       val contributions = List(Contribution("date", "currency", "amount"))
       when(exactTargetServiceMock.subscriberByIdentityId(testIdentityId)).thenReturn(Future.successful(\/-(Some(exactTargetSub))))
       when(exactTargetServiceMock.contributionsByIdentityId(testIdentityId)).thenReturn(Future.successful(\/-(contributions)))
