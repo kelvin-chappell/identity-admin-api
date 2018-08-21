@@ -19,7 +19,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 @Singleton class ExactTargetService @Inject()(postgresUsersReadRepository: PostgresUserRepository,
-                                              newsletterSubscriptionsRepository: PostgresNewsletterSubscriptionsRepository) extends CmtService with LazyLogging {
+                                              newsletterSubscriptionsRepository: PostgresNewsletterSubscriptionsRepository) extends LazyLogging {
 
   implicit val ec = ExecutionContext.fromExecutor(Executors.newCachedThreadPool())
   private val dateTimeFormatterUSA = DateTimeFormat.forPattern("MM/dd/yyyy h:mm:ss a")
@@ -462,7 +462,4 @@ import scala.util.{Failure, Success, Try}
     new ETClient(etConf)
   }
 
-  override def findUserSubscriptions(userId: String): ApiResponse[Option[EmailSubscriptionStatus]] = subscriberByIdentityId(userId)
-  override def unsubscribeAll(userId: String, email: String): ApiResponse[Unit] = unsubscribeFromAllLists(email)
-  override def updateEmailAddress(identityId: String, oldEmail: String, newEmail: String): ApiResponse[Unit] = updateEmailAddress(oldEmail, newEmail)
 }

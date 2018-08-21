@@ -33,6 +33,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
   val pgUserRepo = mock[PostgresUserRepository]
   val pgReservedUsernameRepo = mock[PostgresReservedUsernameRepository]
   val postgresSubjectAccessRequestRepository = mock[PostgresSubjectAccessRequestRepository]
+  val brazeCmtService = mock[BrazeCmtService]
   implicit val actorSystem = ActorSystem()
 
   override def afterAll: Unit = {
@@ -42,7 +43,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
   val service =
     spy(new UserService(identityApiClient,
       eventPublishingActorProvider, salesforceService, salesforceIntegration, madgexService, exactTargetService,
-      discussionService, pgDeletedUserRepo, pgReservedUsernameRepo, pgUserRepo, postgresSubjectAccessRequestRepository, MetricsActorProviderStub))
+      discussionService, pgDeletedUserRepo, pgReservedUsernameRepo, pgUserRepo, postgresSubjectAccessRequestRepository, MetricsActorProviderStub, brazeCmtService))
 
   before {
     Mockito.reset(identityApiClient, eventPublishingActorProvider, service, madgexService, pgDeletedUserRepo, pgReservedUsernameRepo, pgUserRepo)

@@ -30,7 +30,8 @@ import scalaz.{-\/, EitherT, \/-}
     postgresReservedUsernameRepository: PostgresReservedUsernameRepository,
     postgresUsersReadRepository: PostgresUserRepository,
     postgresSubjectAccessRequestRepository: PostgresSubjectAccessRequestRepository,
-    val metricsActorProvider: MetricsActorProvider)
+    val metricsActorProvider: MetricsActorProvider,
+    brazeCmtService: BrazeCmtService)
     (implicit ec: ExecutionContext) extends LazyLogging with MetricsSupport {
 
   private implicit val metricsNamespace = MetricsSupport.Namespace("identity-admin")
@@ -57,6 +58,7 @@ import scalaz.{-\/, EitherT, \/-}
           if(userEmailChanged) {
             identityApiClient.sendEmailValidation(existingUser.id)
             exactTargetService.updateEmailAddress(existingUser.email, userUpdateRequest.email)
+            brazeCmtService.updateEmailAddress(existingUser.id, existingUser.email, userUpdateRequest.email)
           }
 
           if (userEmailChanged && eventsEnabled) {
@@ -285,7 +287,7 @@ import scalaz.{-\/, EitherT, \/-}
     val subscriptionF = EitherT(salesforceService.getSubscriptionByIdentityId(user.idapiUser.id))
     val membershipF = EitherT(salesforceService.getMembershipByIdentityId(user.idapiUser.id))
     val hasCommentedF = EitherT(discussionService.hasCommented(user.idapiUser.id))
-    val exactTargetSubF = EitherT(exactTargetService.subscriberByIdentityId(user.idapiUser.id))
+    val exactTargetSubF = EitherT(brazeCmtService.findUserSubscriptions(user.idapiUser.id))
     val contributionsF = EitherT(exactTargetService.contributionsByIdentityId(user.idapiUser.id))
 
     (for {
@@ -299,7 +301,7 @@ import scalaz.{-\/, EitherT, \/-}
         subscriptionDetails = subscription,
         membershipDetails = membership,
         hasCommented = hasCommented,
-        exactTargetSubscriber = exactTargetSub,
+        exactTargetSubscriber = Some(exactTargetSub),
         contributions = contributions)
     }).run
   }
