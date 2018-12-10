@@ -3,7 +3,7 @@ package services
 import actors.{EventPublishingActorProvider, MetricsActorProviderStub}
 import akka.actor.ActorSystem
 import models.client._
-import models.database.postgres.{PostgresDeletedUserRepository, PostgresReservedUsernameRepository, PostgresSubjectAccessRequestRepository, PostgresUserRepository}
+import models.database.postgres._
 import util.UserConverter._
 import org.mockito.Mockito
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, Matchers, WordSpec}
@@ -32,6 +32,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
   val pgDeletedUserRepo = mock[PostgresDeletedUserRepository]
   val pgUserRepo = mock[PostgresUserRepository]
   val pgReservedUsernameRepo = mock[PostgresReservedUsernameRepository]
+  val pgReservedEmailRepo = mock [PostgresReservedEmailRepository]
   val postgresSubjectAccessRequestRepository = mock[PostgresSubjectAccessRequestRepository]
   val brazeCmtService = mock[BrazeCmtService]
   implicit val actorSystem = ActorSystem()
@@ -43,7 +44,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
   val service =
     spy(new UserService(identityApiClient,
       eventPublishingActorProvider, salesforceService, salesforceIntegration, madgexService, exactTargetService,
-      discussionService, pgDeletedUserRepo, pgReservedUsernameRepo, pgUserRepo, postgresSubjectAccessRequestRepository, MetricsActorProviderStub, brazeCmtService))
+      discussionService, pgDeletedUserRepo, pgReservedUsernameRepo, pgReservedEmailRepo, pgUserRepo, postgresSubjectAccessRequestRepository, MetricsActorProviderStub, brazeCmtService))
 
   before {
     Mockito.reset(identityApiClient, eventPublishingActorProvider, service, madgexService, pgDeletedUserRepo, pgReservedUsernameRepo, pgUserRepo)
