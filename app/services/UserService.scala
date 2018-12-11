@@ -4,7 +4,6 @@ import javax.inject.{Inject, Singleton}
 import actors.EventPublishingActor.{DisplayNameChanged, EmailValidationChanged}
 import actors.EventPublishingActorProvider
 import actors.metrics.{MetricsActorProvider, MetricsSupport}
-import akka.actor.ActorSystem
 import com.typesafe.scalalogging.LazyLogging
 import configuration.Config.PublishEvents.eventsEnabled
 import models.{client, _}
@@ -28,6 +27,7 @@ import scalaz.{-\/, EitherT, \/-}
     discussionService: DiscussionService,
     postgresDeletedUserRepository: PostgresDeletedUserRepository,
     postgresReservedUsernameRepository: PostgresReservedUsernameRepository,
+    postgresReservedEmailRepository: PostgresReservedEmailRepository,
     postgresUsersReadRepository: PostgresUserRepository,
     postgresSubjectAccessRequestRepository: PostgresSubjectAccessRequestRepository,
     val metricsActorProvider: MetricsActorProvider,
@@ -40,42 +40,47 @@ import scalaz.{-\/, EitherT, \/-}
     val emailValid = isEmailValid(existingUser, userUpdateRequest)
     val usernameValid = isUsernameValid(existingUser, userUpdateRequest)
 
-    (emailValid, usernameValid) match {
-      case (true, true) =>
-        val userEmailChanged = !existingUser.email.equalsIgnoreCase(userUpdateRequest.email)
-        val userEmailValidated = if(userEmailChanged) Some(false) else existingUser.status.userEmailValidated
-        val userEmailValidatedChanged = isEmailValidationChanged(userEmailValidated, existingUser.status.userEmailValidated)
-        val usernameChanged = isUsernameChanged(userUpdateRequest.username, existingUser.username)
-        val displayNameChanged = isDisplayNameChanged(userUpdateRequest.displayName, existingUser.displayName)
-        EitherT(postgresUsersReadRepository.update(existingUser, userUpdateRequest)).map { result =>
-          triggerEvents(
-            userId = existingUser.id,
-            usernameChanged = usernameChanged,
-            displayNameChanged = displayNameChanged,
-            emailValidatedChanged = userEmailValidatedChanged
-          )
+    postgresReservedEmailRepository.isReserved(userUpdateRequest.email).flatMap {
+      case \/-(isReserved) => {
+        if (emailValid && usernameValid && !isReserved) {
+            val userEmailChanged = !existingUser.email.equalsIgnoreCase(userUpdateRequest.email)
+            val userEmailValidated = if (userEmailChanged) Some(false) else existingUser.status.userEmailValidated
+            val userEmailValidatedChanged = isEmailValidationChanged(userEmailValidated, existingUser.status.userEmailValidated)
+            val usernameChanged = isUsernameChanged(userUpdateRequest.username, existingUser.username)
+            val displayNameChanged = isDisplayNameChanged(userUpdateRequest.displayName, existingUser.displayName)
+            EitherT(postgresUsersReadRepository.update(existingUser, userUpdateRequest)).map { result =>
+              triggerEvents(
+                userId = existingUser.id,
+                usernameChanged = usernameChanged,
+                displayNameChanged = displayNameChanged,
+                emailValidatedChanged = userEmailValidatedChanged
+              )
 
-          if(userEmailChanged) {
-            identityApiClient.sendEmailValidation(existingUser.id)
-            exactTargetService.updateEmailAddress(existingUser.email, userUpdateRequest.email)
-            brazeCmtService.updateEmailAddress(existingUser.id, existingUser.email, userUpdateRequest.email)
+              if (userEmailChanged) {
+                identityApiClient.sendEmailValidation(existingUser.id)
+                exactTargetService.updateEmailAddress(existingUser.email, userUpdateRequest.email)
+                brazeCmtService.updateEmailAddress(existingUser.id, existingUser.email, userUpdateRequest.email)
+              }
+
+              if (userEmailChanged && eventsEnabled) {
+                salesforceIntegration.enqueueUserUpdate(existingUser.id, userUpdateRequest.email)
+              }
+
+              if (isJobsUser(existingUser) && isJobsUserChanged(existingUser, userUpdateRequest)) {
+                madgexService.update(client.GNMMadgexUser(existingUser.id, userUpdateRequest))
+              }
+
+              result
+            }.run
           }
-
-          if (userEmailChanged && eventsEnabled) {
-            salesforceIntegration.enqueueUserUpdate(existingUser.id, userUpdateRequest.email)
-          }
-
-          if (isJobsUser(existingUser) && isJobsUserChanged(existingUser, userUpdateRequest)) {
-            madgexService.update(client.GNMMadgexUser(existingUser.id, userUpdateRequest))
-          }
-
-          result
-        }.run
-
-      case (false, true) => Future.successful(-\/(ApiError("Email is invalid")))
-      case (true, false) => Future.successful(-\/(ApiError("Username is invalid")))
-      case _ => Future.successful(-\/(ApiError("Email and username are invalid")))
+        else if (!emailValid && usernameValid) Future.successful(-\/(ApiError("Email is invalid")))
+        else if (emailValid && !usernameValid) Future.successful(-\/(ApiError("Username is invalid")))
+        else if (isReserved) Future.successful(-\/(ApiError("Email is reserved")))
+        else Future.successful(-\/(ApiError("Email and username are invalid")))
+      }
+      case -\/(error) => Future.successful(-\/(ApiError(s"Cannot access reserved emails: $error")))
     }
+
   }
 
   def isDisplayNameChanged(newDisplayName: Option[String], existingDisplayName: Option[String]): Boolean =
