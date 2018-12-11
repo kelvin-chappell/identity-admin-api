@@ -23,6 +23,6 @@ class PostgresReservedEmailRepository @Inject()(val metricsActorProvider: Metric
       """.stripMargin
     readOnly { implicit session =>
       sql.map(_.int(1)).single().apply().getOrElse(0) > 0
-    }(logFailure(s"Failed to check if the email $email is reserved"))
+    }(logFailure(s"Failed to check if email is reserved"))
   }
 }

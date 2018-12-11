@@ -41,11 +41,10 @@ import scalaz.{-\/, EitherT, \/-}
     val usernameValid = isUsernameValid(existingUser, userUpdateRequest)
 
     postgresReservedEmailRepository.isReserved(userUpdateRequest.email).flatMap {
-      case \/-(isReserved) =>
-        (emailValid, usernameValid, isReserved) match {
-          case (true, true, false) =>
+      case \/-(isReserved) => {
+        if (emailValid && usernameValid && !isReserved) {
             val userEmailChanged = !existingUser.email.equalsIgnoreCase(userUpdateRequest.email)
-            val userEmailValidated = if(userEmailChanged) Some(false) else existingUser.status.userEmailValidated
+            val userEmailValidated = if (userEmailChanged) Some(false) else existingUser.status.userEmailValidated
             val userEmailValidatedChanged = isEmailValidationChanged(userEmailValidated, existingUser.status.userEmailValidated)
             val usernameChanged = isUsernameChanged(userUpdateRequest.username, existingUser.username)
             val displayNameChanged = isDisplayNameChanged(userUpdateRequest.displayName, existingUser.displayName)
@@ -57,7 +56,7 @@ import scalaz.{-\/, EitherT, \/-}
                 emailValidatedChanged = userEmailValidatedChanged
               )
 
-              if(userEmailChanged) {
+              if (userEmailChanged) {
                 identityApiClient.sendEmailValidation(existingUser.id)
                 exactTargetService.updateEmailAddress(existingUser.email, userUpdateRequest.email)
                 brazeCmtService.updateEmailAddress(existingUser.id, existingUser.email, userUpdateRequest.email)
@@ -73,12 +72,12 @@ import scalaz.{-\/, EitherT, \/-}
 
               result
             }.run
-
-          case (false, true, _) => Future.successful(-\/(ApiError("Email is invalid")))
-          case (true, false, _) => Future.successful(-\/(ApiError("Username is invalid")))
-          case (_, _, true) => Future.successful(-\/(ApiError("Email is reserved")))
-          case _ => Future.successful(-\/(ApiError("Email and username are invalid")))
-        }
+          }
+        else if (!emailValid && usernameValid) Future.successful(-\/(ApiError("Email is invalid")))
+        else if (emailValid && !usernameValid) Future.successful(-\/(ApiError("Username is invalid")))
+        else if (isReserved) Future.successful(-\/(ApiError("Email is reserved")))
+        else Future.successful(-\/(ApiError("Email and username are invalid")))
+      }
       case -\/(error) => Future.successful(-\/(ApiError(s"Cannot access reserved emails: $error")))
     }
 

@@ -32,7 +32,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
   val pgDeletedUserRepo = mock[PostgresDeletedUserRepository]
   val pgUserRepo = mock[PostgresUserRepository]
   val pgReservedUsernameRepo = mock[PostgresReservedUsernameRepository]
-  val pgReservedEmailRepo = mock [PostgresReservedEmailRepository]
+  val pgReservedEmailRepo = mock[PostgresReservedEmailRepository]
   val postgresSubjectAccessRequestRepository = mock[PostgresSubjectAccessRequestRepository]
   val brazeCmtService = mock[BrazeCmtService]
   implicit val actorSystem = ActorSystem()
@@ -47,7 +47,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
       discussionService, pgDeletedUserRepo, pgReservedUsernameRepo, pgReservedEmailRepo, pgUserRepo, postgresSubjectAccessRequestRepository, MetricsActorProviderStub, brazeCmtService))
 
   before {
-    Mockito.reset(identityApiClient, eventPublishingActorProvider, service, madgexService, pgDeletedUserRepo, pgReservedUsernameRepo, pgUserRepo)
+    Mockito.reset(identityApiClient, eventPublishingActorProvider, service, madgexService, pgDeletedUserRepo, pgReservedUsernameRepo, pgReservedEmailRepo, pgUserRepo)
   }
 
   "isUsernameChanged" should {
@@ -126,11 +126,25 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
 
       when(pgUserRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
       when(identityApiClient.sendEmailValidation(user.id)).thenReturn(Future.successful(\/-{}))
+      when(pgReservedEmailRepo.isReserved(userUpdateRequest.email)).thenReturn(Future.successful(\/-(false)))
 
       val result = service.update(user, userUpdateRequest)
 
       Await.result(result, 1.second) shouldEqual \/-(updatedUser)
       verify(identityApiClient).sendEmailValidation(user.id)
+    }
+
+    "not update when unable to access reserved emails" in {
+      val user = User("id", "email@theguardian.com")
+      val userUpdateRequest = UserUpdateRequest(email = "changedEmail@theguardian.com", username = Some("username"))
+
+      val updatedUser = user.copy(email = userUpdateRequest.email)
+
+      when(pgReservedEmailRepo.isReserved(userUpdateRequest.email)).thenReturn(Future.successful(\/-(true)))
+
+      val result = service.update(user, userUpdateRequest)
+
+      Await.result(result, 1.second) shouldEqual -\/(ApiError("Email is reserved"))
     }
 
     "update madgex when jobs user changed" in {
@@ -142,6 +156,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
 
       when(pgUserRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
       when(identityApiClient.sendEmailValidation(user.id)).thenReturn(Future.successful(\/-{}))
+      when(pgReservedEmailRepo.isReserved(userUpdateRequest.email)).thenReturn(Future.successful(\/-(false)))
 
       val result = service.update(user, userUpdateRequest)
 
@@ -156,6 +171,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
       val updatedUser = user.copy(email = userUpdateRequest.email)
 
       when(pgUserRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
+      when(pgReservedEmailRepo.isReserved(userUpdateRequest.email)).thenReturn(Future.successful(\/-(false)))
 
       Await.result(service.update(user, userUpdateRequest), 1.second) shouldEqual \/-(updatedUser)
       verifyZeroInteractions(madgexService)
@@ -168,6 +184,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
       val updatedUser = user.copy(email = userUpdateRequest.email)
 
       when(pgUserRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
+      when(pgReservedEmailRepo.isReserved(userUpdateRequest.email)).thenReturn(Future.successful(\/-(false)))
 
       Await.result(service.update(user, userUpdateRequest), 1.second) shouldEqual \/-(updatedUser)
       verifyZeroInteractions(identityApiClient)
@@ -180,6 +197,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
       val updatedUser = user.copy(email = userUpdateRequest.email)
 
       when(pgUserRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
+      when(pgReservedEmailRepo.isReserved(userUpdateRequest.email)).thenReturn(Future.successful(\/-(false)))
 
       val result = service.update(user, userUpdateRequest)
 
@@ -191,6 +209,8 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
       val user = User("id", "email@theguardian.com")
       val updateRequest = UserUpdateRequest(email = user.email, username = Some("123"))
 
+      when(pgReservedEmailRepo.isReserved(updateRequest.email)).thenReturn(Future.successful(\/-(false)))
+
       Await.result(service.update(user, updateRequest), 1.second) shouldEqual -\/(ApiError("Username is invalid"))
       verifyZeroInteractions(pgUserRepo)
     }
@@ -199,6 +219,8 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
       val user = User("id", "email@theguardian.com")
       val updateRequest = UserUpdateRequest(email = user.email, username = Some("123456789012345678901"))
 
+      when(pgReservedEmailRepo.isReserved(updateRequest.email)).thenReturn(Future.successful(\/-(false)))
+
       Await.result(service.update(user, updateRequest), 1.second) shouldEqual -\/(ApiError("Username is invalid"))
       verifyZeroInteractions(pgUserRepo)
     }
@@ -206,6 +228,8 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
     "return bad request api error if the username is contains non alpha-numeric chars" in {
       val user = User("id", "email@theguardian.com")
       val updateRequest = UserUpdateRequest(email = user.email, username = Some("abc123$"))
+
+      when(pgReservedEmailRepo.isReserved(updateRequest.email)).thenReturn(Future.successful(\/-(false)))
 
       Await.result(service.update(user, updateRequest), 1.second) shouldEqual -\/(ApiError("Username is invalid"))
       verifyZeroInteractions(pgUserRepo)
@@ -218,6 +242,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
       
 
       when(pgUserRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(-\/(ApiError("boom"))))
+      when(pgReservedEmailRepo.isReserved(userUpdateRequest.email)).thenReturn(Future.successful(\/-(false)))
 
       Await.result(service.update(user, userUpdateRequest), 1.second) shouldEqual -\/(ApiError("boom"))
       verify(identityApiClient, never()).sendEmailValidation(user.id)
