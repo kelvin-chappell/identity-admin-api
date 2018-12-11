@@ -134,7 +134,7 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
       verify(identityApiClient).sendEmailValidation(user.id)
     }
 
-    "not update when unable to access reserved emails" in {
+    "not update when email address is reserved" in {
       val user = User("id", "email@theguardian.com")
       val userUpdateRequest = UserUpdateRequest(email = "changedEmail@theguardian.com", username = Some("username"))
 
