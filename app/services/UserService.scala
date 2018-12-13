@@ -57,6 +57,7 @@ import scalaz.{-\/, EitherT, \/-}
               )
 
               if (userEmailChanged) {
+                postgresUsersReadRepository.updateEmailValidationStatus(existingUser, false)
                 identityApiClient.sendEmailValidation(existingUser.id)
                 exactTargetService.updateEmailAddress(existingUser.email, userUpdateRequest.email)
                 brazeCmtService.updateEmailAddress(existingUser.id, existingUser.email, userUpdateRequest.email)
