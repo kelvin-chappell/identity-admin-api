@@ -4,7 +4,7 @@ import com.gu.identity.model.{EmailNewsletter, EmailNewsletters}
 import javax.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import configuration.Config
-import models.client.{ApiError, ApiResponse}
+import models.client.{ApiError, ApiResponse, NewslettersSubscription}
 import play.api.libs.json._
 import play.api.libs.ws.{WSClient, WSRequest}
 import play.api.libs.functional.syntax._
@@ -71,7 +71,7 @@ class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) 
 
   private def newsletterFromId(id: String): Option[EmailNewsletter] = EmailNewsletters.all.subscriptions.find(_.allIds.exists(_.toString == id))
 
-  def getUserLists(userId: String): ApiResponse[List[EmailNewsletter]] = {
+  def findNewsletterSubscriptions(userId: String): ApiResponse[NewslettersSubscription] = {
     addAuthHeaders(ws.url(s"$baseUrl/useremails/$userId")).get().map { response =>
       val listIds = Try(Json.parse(response.body) \ "result" \ "subscriptions" match {
         case JsDefined(JsArray(values)) =>
@@ -85,12 +85,12 @@ class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) 
         logger.error(s"Failed to get list information for $userId")
         Seq.empty[String]
       }
-      \/-(listIds.flatMap(listId => newsletterFromId(listId)).toList)
+      \/-(NewslettersSubscription(listIds.toList))
     }
   }
 
-  def deleteAllLists(userId: String): ApiResponse[Unit] = {
-    addAuthHeaders(ws.url(s"$baseUrl/useremails/$userId")).delete().map { response =>
+  def unsubscribeAll(userId: String): ApiResponse[Unit] = {
+    addAuthHeaders(ws.url(s"$baseUrl/useremails/$userId/unsubscribe")).post("").map { response =>
       if (response.status == 200) {
         \/-(())
       } else {

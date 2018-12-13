@@ -16,7 +16,7 @@ import play.api.mvc._
 import play.api.mvc.Results._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import services.{DiscussionService, ExactTargetService, SalesforceService, UserService}
+import services._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.{-\/, \/-}
@@ -32,13 +32,11 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
   val userService = mock[UserService]
   val dapiWsMockurl = s"/profile/10000001/stats"
   val dapiWsMock = MockWS { case (GET, dapiWsMockurl) => Action {Ok("""{"status":"ok","comments":0,"pickedComments":0}""")}}
-  val exactTargetServiceMock = mock[ExactTargetService]
   val salesforceService = mock[SalesforceService]
   val identityUserAction = mock[IdentityUserAction]
   val orphanUserAction = mock[OrphanUserAction]
   val discussionMock = mock[DiscussionService]
-
-  when(exactTargetServiceMock.newslettersSubscriptionByIdentityId("abc")).thenReturn(Future.successful(\/-(None)))
+  val identityApiClient = mock[IdentityApiClient]
 
   // So we can apply FakeRequest without needing to add HMAC header
   class StubAuthenticatedAction(override val parser: BodyParsers.Default) extends AuthenticatedAction(parser) {
@@ -69,7 +67,7 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
     orphanUserAction,
     salesforceService,
     discussionMock,
-    exactTargetServiceMock,
+    identityApiClient,
     MetricsActorProviderStub)
 
 
@@ -192,13 +190,11 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
 
   "findExactTargetDetails" should {
     "find a user's exact target details" in {
-      val exactTargetSub = EmailSubscriptionStatus("status", None, None)
-      val contributions = List(Contribution("date", "currency", "amount"))
-      when(exactTargetServiceMock.subscriberByIdentityId(testIdentityId)).thenReturn(Future.successful(\/-(Some(exactTargetSub))))
-      when(exactTargetServiceMock.contributionsByIdentityId(testIdentityId)).thenReturn(Future.successful(\/-(contributions)))
+      val newsletterSubs = NewslettersSubscription(List("123"))
+      when(identityApiClient.findNewsletterSubscriptions(testIdentityId)) thenReturn Future.successful(\/-(newsletterSubs))
       val result = controller.findExactTargetDetails(testIdentityId)(FakeRequest())
       status(result) shouldEqual OK
-      contentAsJson(result) shouldEqual Json.toJson(ExactTargetDetails(Some(exactTargetSub), contributions))
+      contentAsJson(result) shouldEqual Json.parse("""{"list":["123"]}""")
     }
   }
 

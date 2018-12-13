@@ -15,7 +15,7 @@ import util.UserConverter._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.std.scalaFuture._
-import scalaz.{-\/, EitherT, \/-}
+import scalaz.{-\/, EitherT, \/, \/-}
 
 @Singleton class UserService @Inject()(
     identityApiClient: IdentityApiClient,
@@ -23,15 +23,13 @@ import scalaz.{-\/, EitherT, \/-}
     salesforceService: SalesforceService,
     salesforceIntegration: SalesforceIntegration,
     madgexService: MadgexService,
-    exactTargetService: ExactTargetService,
     discussionService: DiscussionService,
     postgresDeletedUserRepository: PostgresDeletedUserRepository,
     postgresReservedUsernameRepository: PostgresReservedUsernameRepository,
     postgresReservedEmailRepository: PostgresReservedEmailRepository,
     postgresUsersReadRepository: PostgresUserRepository,
     postgresSubjectAccessRequestRepository: PostgresSubjectAccessRequestRepository,
-    val metricsActorProvider: MetricsActorProvider,
-    brazeCmtService: BrazeCmtService)
+    val metricsActorProvider: MetricsActorProvider)
     (implicit ec: ExecutionContext) extends LazyLogging with MetricsSupport {
 
   private implicit val metricsNamespace = MetricsSupport.Namespace("identity-admin")
@@ -42,38 +40,7 @@ import scalaz.{-\/, EitherT, \/-}
 
     postgresReservedEmailRepository.isReserved(userUpdateRequest.email).flatMap {
       case \/-(isReserved) => {
-        if (emailValid && usernameValid && !isReserved) {
-            val userEmailChanged = !existingUser.email.equalsIgnoreCase(userUpdateRequest.email)
-            val userEmailValidated = if (userEmailChanged) Some(false) else existingUser.status.userEmailValidated
-            val userEmailValidatedChanged = isEmailValidationChanged(userEmailValidated, existingUser.status.userEmailValidated)
-            val usernameChanged = isUsernameChanged(userUpdateRequest.username, existingUser.username)
-            val displayNameChanged = isDisplayNameChanged(userUpdateRequest.displayName, existingUser.displayName)
-            val updateRequestWithEmailValidation = userUpdateRequest.copy(userEmailValidated = userEmailValidated)
-            EitherT(postgresUsersReadRepository.update(existingUser, updateRequestWithEmailValidation)).map { result =>
-              triggerEvents(
-                userId = existingUser.id,
-                usernameChanged = usernameChanged,
-                displayNameChanged = displayNameChanged,
-                emailValidatedChanged = userEmailValidatedChanged
-              )
-
-              if (userEmailChanged) {
-                identityApiClient.sendEmailValidation(existingUser.id)
-                exactTargetService.updateEmailAddress(existingUser.email, userUpdateRequest.email)
-                brazeCmtService.updateEmailAddress(existingUser.id, existingUser.email, userUpdateRequest.email)
-              }
-
-              if (userEmailChanged && eventsEnabled) {
-                salesforceIntegration.enqueueUserUpdate(existingUser.id, userUpdateRequest.email)
-              }
-
-              if (isJobsUser(existingUser) && isJobsUserChanged(existingUser, userUpdateRequest)) {
-                madgexService.update(client.GNMMadgexUser(existingUser.id, userUpdateRequest))
-              }
-
-              result
-            }.run
-          }
+        if (emailValid && usernameValid && !isReserved) updateUser(existingUser, userUpdateRequest)
         else if (!emailValid && usernameValid) Future.successful(-\/(ApiError("Email is invalid")))
         else if (emailValid && !usernameValid) Future.successful(-\/(ApiError("Username is invalid")))
         else if (isReserved) Future.successful(-\/(ApiError("Email is reserved")))
@@ -82,6 +49,32 @@ import scalaz.{-\/, EitherT, \/-}
       case -\/(error) => Future.successful(-\/(ApiError(s"Cannot access reserved emails: $error")))
     }
 
+  }
+
+  private def updateUser(existingUser: User, userUpdateRequest: UserUpdateRequest): Future[ApiError \/ User] = {
+    val userEmailChanged = !existingUser.email.equalsIgnoreCase(userUpdateRequest.email)
+    val userEmailValidated = if (userEmailChanged) Some(false) else existingUser.status.userEmailValidated
+    val userEmailValidatedChanged = isEmailValidationChanged(userEmailValidated, existingUser.status.userEmailValidated)
+    val usernameChanged = isUsernameChanged(userUpdateRequest.username, existingUser.username)
+    val displayNameChanged = isDisplayNameChanged(userUpdateRequest.displayName, existingUser.displayName)
+    val updateRequestWithEmailValidation = userUpdateRequest.copy(userEmailValidated = userEmailValidated)
+
+    val updatedUser = for {
+      user <- EitherT(postgresUsersReadRepository.update(existingUser, updateRequestWithEmailValidation))
+      _ = triggerEvents(existingUser.id, usernameChanged, displayNameChanged, userEmailValidatedChanged)
+      _ <- if (userEmailChanged) updateEmailAddress(user.id, userUpdateRequest.email) else EitherT.right[Future, ApiError, Unit](Future.successful(()))
+      _ = if (userEmailChanged && eventsEnabled) salesforceIntegration.enqueueUserUpdate(existingUser.id, userUpdateRequest.email)
+      _ = if (isJobsUser(existingUser) && isJobsUserChanged(existingUser, userUpdateRequest)) madgexService.update(client.GNMMadgexUser(existingUser.id, userUpdateRequest))
+    } yield user
+
+    updatedUser.run
+  }
+
+  private def updateEmailAddress(userId: String, newEmail: String): EitherT[Future, ApiError, Unit] = {
+    for {
+      _ <- EitherT(identityApiClient.changeEmail(userId, newEmail))
+      _ <- EitherT(identityApiClient.sendEmailValidation(userId))
+    } yield ()
   }
 
   def isDisplayNameChanged(newDisplayName: Option[String], existingDisplayName: Option[String]): Boolean =
@@ -192,16 +185,10 @@ import scalaz.{-\/, EitherT, \/-}
     val emptySearchResponse = SearchResponse.create(0, 0, Nil)
 
     if (isEmail(email)) {
-      val subOrphanOptF = EitherT(salesforceService.getSubscriptionByEmail(email))
-      val newsOrphanOptF = EitherT(exactTargetService.newslettersSubscriptionByEmail(email))
-      val contributionsListF = EitherT(exactTargetService.contributionsByEmail(email))
-
       (for {
-        subOrphanOpt <- subOrphanOptF
-        newsOrphanOpt <- newsOrphanOptF
-        contributionsList <- contributionsListF
+        subOrphanOpt <- EitherT(salesforceService.getSubscriptionByEmail(email))
       } yield {
-        if (subOrphanOpt.isDefined || newsOrphanOpt.isDefined || contributionsList.nonEmpty)
+        if (subOrphanOpt.isDefined)
           orphanSearchResponse
         else
           emptySearchResponse
@@ -293,22 +280,19 @@ import scalaz.{-\/, EitherT, \/-}
     val subscriptionF = EitherT(salesforceService.getSubscriptionByIdentityId(user.idapiUser.id))
     val membershipF = EitherT(salesforceService.getMembershipByIdentityId(user.idapiUser.id))
     val hasCommentedF = EitherT(discussionService.hasCommented(user.idapiUser.id))
-    val exactTargetSubF = EitherT(brazeCmtService.findUserSubscriptions(user.idapiUser.id))
-    val contributionsF = EitherT(exactTargetService.contributionsByIdentityId(user.idapiUser.id))
+    val newslettersF = EitherT(identityApiClient.findNewsletterSubscriptions(user.idapiUser.id))
 
     (for {
       subscription <- subscriptionF
       membership <- membershipF
       hasCommented <- hasCommentedF
-      exactTargetSub <- exactTargetSubF
-      contributions <- contributionsF
+      newsletters <- newslettersF
     } yield {
       user.copy(
         subscriptionDetails = subscription,
         membershipDetails = membership,
         hasCommented = hasCommented,
-        exactTargetSubscriber = Some(exactTargetSub),
-        contributions = contributions)
+        newsletters = newsletters)
     }).run
   }
 
