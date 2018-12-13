@@ -48,7 +48,8 @@ import scalaz.{-\/, EitherT, \/-}
             val userEmailValidatedChanged = isEmailValidationChanged(userEmailValidated, existingUser.status.userEmailValidated)
             val usernameChanged = isUsernameChanged(userUpdateRequest.username, existingUser.username)
             val displayNameChanged = isDisplayNameChanged(userUpdateRequest.displayName, existingUser.displayName)
-            EitherT(postgresUsersReadRepository.update(existingUser, userUpdateRequest)).map { result =>
+            val updateRequestWithEmailValidation = userUpdateRequest.copy(userEmailValidated = userEmailValidated)
+            EitherT(postgresUsersReadRepository.update(existingUser, updateRequestWithEmailValidation)).map { result =>
               triggerEvents(
                 userId = existingUser.id,
                 usernameChanged = usernameChanged,
