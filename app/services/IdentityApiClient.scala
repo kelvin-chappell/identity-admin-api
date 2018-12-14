@@ -8,12 +8,9 @@ import models.client.{ApiError, ApiResponse, NewslettersSubscription}
 import play.api.libs.json._
 import play.api.libs.ws.{WSClient, WSRequest}
 import play.api.libs.functional.syntax._
-
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.{-\/, \/, \/-}
-
-import scala.util.Try
-
+import scala.util.{Success, Try}
 case class IdentityApiError(message: String, description: String, context: Option[String] = None)
 
 object IdentityApiError {
@@ -24,6 +21,16 @@ case class IdentityApiErrorResponse(status: String, errors: List[IdentityApiErro
 
 object IdentityApiErrorResponse {
   implicit val format = Json.format[IdentityApiErrorResponse]
+}
+
+case class IdentityNewsletterListId(listId: String)
+case class IdentityNewsletterSubs(globalSubscriptionStatus: String, subscriptions: List[IdentityNewsletterListId])
+case class IdentityNewsletterResponse(result: IdentityNewsletterSubs)
+
+object IdentityNewsletterResponse {
+  implicit val listFormat = Json.format[IdentityNewsletterListId]
+  implicit val subsFormat = Json.format[IdentityNewsletterSubs]
+  implicit val newsletterResponseFormat = Json.format[IdentityNewsletterResponse]
 }
 
 class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) extends LazyLogging {
@@ -73,19 +80,14 @@ class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) 
 
   def findNewsletterSubscriptions(userId: String): ApiResponse[NewslettersSubscription] = {
     addAuthHeaders(ws.url(s"$baseUrl/useremails/$userId")).get().map { response =>
-      val listIds = Try(Json.parse(response.body) \ "result" \ "subscriptions" match {
-        case JsDefined(JsArray(values)) =>
-          values.collect {
-            case JsString(listId) => listId
-          }
-        case other =>
-          logger.error(s"Unexpected format for subscriptions, expected a list of strings got $other")
-          Seq.empty[String]
-      }).getOrElse{
-        logger.error(s"Failed to get list information for $userId")
-        Seq.empty[String]
+      Try(Json.parse(response.body).asOpt[IdentityNewsletterResponse]) match {
+        case Success(Some(parsedResponse)) =>
+          \/-(NewslettersSubscription(parsedResponse.result.globalSubscriptionStatus, parsedResponse.result.subscriptions.map(_.listId)))
+        case _ =>
+          logger.error(s"findNewsletterSubscriptions unexpected response from idapi $userId ${response.status} ${response.body}")
+          -\/(ApiError("unexpected response from idapi"))
       }
-      \/-(NewslettersSubscription(listIds.toList))
+
     }
   }
 
@@ -94,7 +96,7 @@ class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) 
       if (response.status == 200) {
         \/-(())
       } else {
-        -\/(ApiError(s"Failed to delete subscriptions for $userId", s"Unexpected Response Code ${response.status}"))
+        -\/(ApiError(s"Failed to delete subscriptions for $userId", s"Unexpected Response Code $userId ${response.status} ${response.body}"))
       }
     }
   }
@@ -106,7 +108,7 @@ class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) 
       if (response.status == 200) {
         \/-(())
       } else {
-        -\/(ApiError(s"Failed to change email for $userId", s"Unexpected Response Code ${response.status}"))
+        -\/(ApiError(s"Failed to change email for $userId", s"Unexpected Response Code $userId ${response.status} ${response.body}"))
       }
     }
   }

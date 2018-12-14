@@ -278,21 +278,12 @@ import scalaz.{-\/, EitherT, \/, \/-}
 
   def enrichUserWithProducts(user: GuardianUser): ApiResponse[GuardianUser] = withMetricsFE("enrichUserWithProducts") {
     val subscriptionF = EitherT(salesforceService.getSubscriptionByIdentityId(user.idapiUser.id))
-    val membershipF = EitherT(salesforceService.getMembershipByIdentityId(user.idapiUser.id))
-    val hasCommentedF = EitherT(discussionService.hasCommented(user.idapiUser.id))
-    val newslettersF = EitherT(identityApiClient.findNewsletterSubscriptions(user.idapiUser.id))
 
     (for {
       subscription <- subscriptionF
-      membership <- membershipF
-      hasCommented <- hasCommentedF
-      newsletters <- newslettersF
     } yield {
       user.copy(
-        subscriptionDetails = subscription,
-        membershipDetails = membership,
-        hasCommented = hasCommented,
-        newsletters = newsletters)
+        subscriptionDetails = subscription)
     }).run
   }
 

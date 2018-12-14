@@ -111,7 +111,9 @@ object SalesforceDetails {
   implicit val format = Json.format[SalesforceDetails]
 }
 
-case class NewslettersSubscription(list: List[String])
+case class NewslettersSubscription(
+  globalSubscriptionStatus: String,
+  newsletterSubscriptions: List[String])
 
 object NewslettersSubscription {
   implicit val format = Json.format[NewslettersSubscription]
@@ -203,10 +205,7 @@ object User {
   */
 case class GuardianUser(
   idapiUser: User,
-  membershipDetails: Option[SalesforceSubscription] = None,
   subscriptionDetails: Option[SalesforceSubscription] = None,
-  newsletters: NewslettersSubscription = NewslettersSubscription(Nil),
-  hasCommented: Boolean = false,
   deleted: Boolean = false,
   orphan: Boolean = false,
   blocklisted: Boolean = false
