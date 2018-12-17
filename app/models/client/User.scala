@@ -111,47 +111,12 @@ object SalesforceDetails {
   implicit val format = Json.format[SalesforceDetails]
 }
 
-case class NewslettersSubscription(list: List[String])
+case class NewslettersSubscription(
+  globalSubscriptionStatus: String,
+  newsletterSubscriptions: List[String])
 
 object NewslettersSubscription {
   implicit val format = Json.format[NewslettersSubscription]
-}
-
-case class ConsumerEmail(
-  emailName: String,
-  deliveredDate: String,
-  openTime: String
-)
-
-object ConsumerEmail {
-  implicit val format = Json.format[ConsumerEmail]
-}
-
-case class ConsumerEmails(list: List[ConsumerEmail])
-
-object ConsumerEmails {
-  implicit val format = Json.format[ConsumerEmails]
-}
-
-case class EmailSubscriptionStatus(
-  status: String,
-  newsletters: Option[NewslettersSubscription],
-  consumerEmails: Option[ConsumerEmails])
-
-object EmailSubscriptionStatus {
-  implicit val format = Json.format[EmailSubscriptionStatus]
-}
-
-case class Contribution(date: String, currency: String, amount: String)
-
-object Contribution {
-  implicit val format = Json.format[Contribution]
-}
-
-case class ExactTargetDetails(exactTargetSubscriber: Option[EmailSubscriptionStatus], contributions: List[Contribution])
-
-object ExactTargetDetails {
-  implicit val format = Json.format[ExactTargetDetails]
 }
 
 case class Consent(
@@ -240,13 +205,9 @@ object User {
   */
 case class GuardianUser(
   idapiUser: User,
-  membershipDetails: Option[SalesforceSubscription] = None,
   subscriptionDetails: Option[SalesforceSubscription] = None,
-  exactTargetSubscriber: Option[EmailSubscriptionStatus] = None,
-  hasCommented: Boolean = false,
   deleted: Boolean = false,
   orphan: Boolean = false,
-  contributions: List[Contribution] = Nil,
   blocklisted: Boolean = false
 )
 

@@ -34,7 +34,7 @@ import java.nio.file.Files
     orphanUserAction: OrphanUserAction,
     salesforce: SalesforceService,
     discussionService: DiscussionService,
-    exactTargetService: ExactTargetService,
+    identityApiClient: IdentityApiClient,
     override val metricsActorProvider: MetricsActorProvider)
     (implicit ec: ExecutionContext) extends AbstractController(cc) with LazyLogging with MetricsSupport {
 
@@ -120,17 +120,9 @@ import java.nio.file.Files
     }
   }
 
-  def findExactTargetDetails(id: String) = auth.async { _ =>
-    withMetricsF("findExactTargetDetails") {
-      val exactTargetSubF = EitherT(exactTargetService.subscriberByIdentityId(id))
-      val contributionsF = EitherT(exactTargetService.contributionsByIdentityId(id))
-
-      val result = for {
-        exactTargetSub <- exactTargetSubF
-        contributions <- contributionsF
-      } yield ExactTargetDetails(exactTargetSub, contributions)
-
-      result.run.map {
+  def findNewsletterSubscriptions(id: String) = auth.async { _ =>
+    withMetricsF("findNewsletterSubscriptions") {
+      identityApiClient.findNewsletterSubscriptions(id).map {
         case \/-(result) => Ok(result)
         case -\/(error) => InternalServerError(error)
       }
@@ -164,11 +156,9 @@ import java.nio.file.Files
   def delete(id: String) = (auth andThen identityUserAction(id)).async { request =>
     logger.info(s"Deleting user $id")
 
-    val deleteEmailSubscriberF = EitherT(exactTargetService.deleteSubscriber(request.user.idapiUser.email))
     val deleteAccountF = EitherT(userService.delete(request.user))
 
     (for {
-      _ <- deleteEmailSubscriberF
       _ <- deleteAccountF
     } yield {
       EmailService.sendDeletionConfirmation(request.user.idapiUser.email)
@@ -184,31 +174,16 @@ import java.nio.file.Files
     )
   }
 
-  def unsubcribeFromAllEmailLists(email: String) = auth.async { request =>
+  def unsubcribeFromAllEmailLists(userId: String) = auth.async { request =>
     logger.info("Unsubscribing from all editorial email lists ")
 
-    EitherT(exactTargetService.unsubscribeFromAllLists(email)).fold(
+    EitherT(identityApiClient.unsubscribeAll(userId)).fold(
       error => {
-        logger.error(s"Failed to unsubscribe from all email lists: $error")
+        logger.error(s"Failed to unsubscribe from all email lists: $userId $error")
         InternalServerError(error)
       },
       _ => {
-        logger.info(s"Successfully unsubscribed from all email lists")
-        NoContent
-      }
-    )
-  }
-
-  def activateEmailSubscriptions(email: String) = auth.async { request =>
-    logger.info("Activate email address in ExactTarget")
-
-    EitherT(exactTargetService.activateEmailSubscription(email)).fold(
-      error => {
-        logger.error(s"Failed to activate email subscriptions: $error")
-        InternalServerError(error)
-      },
-      _ => {
-        logger.info(s"Successfully activated email subscriptions")
+        logger.info(s"Successfully unsubscribed from all email lists $userId")
         NoContent
       }
     )

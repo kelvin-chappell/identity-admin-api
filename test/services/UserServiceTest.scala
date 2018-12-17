@@ -27,14 +27,12 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
   val salesforceService = mock[SalesforceService]
   val salesforceIntegration = mock[SalesforceIntegration]
   val madgexService = mock[MadgexService]
-  val exactTargetService = mock[ExactTargetService]
   val discussionService = mock[DiscussionService]
   val pgDeletedUserRepo = mock[PostgresDeletedUserRepository]
   val pgUserRepo = mock[PostgresUserRepository]
   val pgReservedUsernameRepo = mock[PostgresReservedUsernameRepository]
   val pgReservedEmailRepo = mock[PostgresReservedEmailRepository]
   val postgresSubjectAccessRequestRepository = mock[PostgresSubjectAccessRequestRepository]
-  val brazeCmtService = mock[BrazeCmtService]
   implicit val actorSystem = ActorSystem()
 
   override def afterAll: Unit = {
@@ -43,8 +41,8 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
 
   val service =
     spy(new UserService(identityApiClient,
-      eventPublishingActorProvider, salesforceService, salesforceIntegration, madgexService, exactTargetService,
-      discussionService, pgDeletedUserRepo, pgReservedUsernameRepo, pgReservedEmailRepo, pgUserRepo, postgresSubjectAccessRequestRepository, MetricsActorProviderStub, brazeCmtService))
+      eventPublishingActorProvider, salesforceService, salesforceIntegration, madgexService,
+      discussionService, pgDeletedUserRepo, pgReservedUsernameRepo, pgReservedEmailRepo, pgUserRepo, postgresSubjectAccessRequestRepository, MetricsActorProviderStub))
 
   before {
     Mockito.reset(identityApiClient, eventPublishingActorProvider, service, madgexService, pgDeletedUserRepo, pgReservedUsernameRepo, pgReservedEmailRepo, pgUserRepo)
@@ -121,18 +119,18 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
     "update when email and username are valid" in {
       val user = User("id", "email@theguardian.com")
       val userUpdateRequest = UserUpdateRequest(email = "changedEmail@theguardian.com", username = Some("username"))
-
       val updatedUser = user.copy(email = userUpdateRequest.email)
 
-      when(pgUserRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
+      when(pgUserRepo.update(user, userUpdateRequest.copy(userEmailValidated = Some(false)))).thenReturn(Future.successful(\/-(updatedUser)))
       when(identityApiClient.sendEmailValidation(user.id)).thenReturn(Future.successful(\/-{}))
       when(pgReservedEmailRepo.isReserved(userUpdateRequest.email)).thenReturn(Future.successful(\/-(false)))
+      when(identityApiClient.changeEmail(user.id, updatedUser.email)) thenReturn Future.successful(\/-(()))
+      when(identityApiClient.sendEmailValidation(user.id)) thenReturn Future.successful(\/-(()))
 
       val result = service.update(user, userUpdateRequest)
 
       Await.result(result, 1.second) shouldEqual \/-(updatedUser)
       verify(identityApiClient).sendEmailValidation(user.id)
-      verify(pgUserRepo, times(1)).updateEmailValidationStatus(user, false)
     }
 
     "not update when email address is reserved" in {
@@ -149,13 +147,16 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
     "update madgex when jobs user changed" in {
       val user = User("id", "email@theguardian.com", groups = jobsGroup)
       val userUpdateRequest = UserUpdateRequest(email = "changedEmail@theguardian.com")
+      val expectedUserUpdateRequest = UserUpdateRequest(email = "changedEmail@theguardian.com", userEmailValidated = Some(false))
       val gNMMadgexUser = GNMMadgexUser(user.id, userUpdateRequest)
       
       val updatedUser = user.copy(email = userUpdateRequest.email)
 
-      when(pgUserRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
+      when(pgUserRepo.update(user, expectedUserUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
       when(identityApiClient.sendEmailValidation(user.id)).thenReturn(Future.successful(\/-{}))
       when(pgReservedEmailRepo.isReserved(userUpdateRequest.email)).thenReturn(Future.successful(\/-(false)))
+      when(identityApiClient.changeEmail(user.id, updatedUser.email)) thenReturn Future.successful(\/-(()))
+      when(identityApiClient.sendEmailValidation(user.id)) thenReturn Future.successful(\/-(()))
 
       val result = service.update(user, userUpdateRequest)
 
@@ -166,11 +167,13 @@ class UserServiceTest extends WordSpec with MockitoSugar with Matchers with Befo
     "not update madgex when non-jobs user changed" in {
       val user = User("id", "email@theguardian.com")
       val userUpdateRequest = UserUpdateRequest(email = "changedEmail@theguardian.com")
-      
+      val expectedUserUpdateRequest = UserUpdateRequest(email = "changedEmail@theguardian.com", userEmailValidated = Some(false))
       val updatedUser = user.copy(email = userUpdateRequest.email)
 
-      when(pgUserRepo.update(user, userUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
+      when(pgUserRepo.update(user, expectedUserUpdateRequest)).thenReturn(Future.successful(\/-(updatedUser)))
       when(pgReservedEmailRepo.isReserved(userUpdateRequest.email)).thenReturn(Future.successful(\/-(false)))
+      when(identityApiClient.changeEmail(user.id, updatedUser.email)) thenReturn Future.successful(\/-(()))
+      when(identityApiClient.sendEmailValidation(user.id)) thenReturn Future.successful(\/-(()))
 
       Await.result(service.update(user, userUpdateRequest), 1.second) shouldEqual \/-(updatedUser)
       verifyZeroInteractions(madgexService)

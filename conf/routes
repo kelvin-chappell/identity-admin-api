@@ -6,7 +6,7 @@ GET        /v1/user/:id/sar                         @controllers.UsersController
 GET        /v1/user/:id                             @controllers.UsersController.findById(id: String)
 GET        /v1/user/:id/salesforce                  @controllers.UsersController.findSalesforceDetails(id: String)
 GET        /v1/user/:id/has-commented               @controllers.UsersController.hasCommented(id: String)
-GET        /v1/user/:id/cmt                         @controllers.UsersController.findExactTargetDetails(id: String)
+GET        /v1/user/:id/cmt                         @controllers.UsersController.findNewsletterSubscriptions(id: String)
 GET        /v1/user/:id/identity                    @controllers.UsersController.findIdentityUser(id: String)
 PUT        /v1/user/:id                             @controllers.UsersController.update(id: String)
 DELETE     /v1/user/:id                             @controllers.UsersController.delete(id: String)
@@ -14,7 +14,6 @@ POST       /v1/user/:id/send-validation-email       @controllers.UsersController
 POST       /v1/user/:id/validate-email              @controllers.UsersController.validateEmail(id: String)
 POST       /v1/user/:id/unreserve-email             @controllers.UsersController.unreserveEmail(id: String)
 POST       /v1/user/:id/block-email                 @controllers.UsersController.blockEmail(id: String)
-POST       /v1/user/:email/unsubscribe-email        @controllers.UsersController.unsubcribeFromAllEmailLists(email: String)
-POST       /v1/user/:email/activate-email           @controllers.UsersController.activateEmailSubscriptions(email: String)
+POST       /v1/user/:id/unsubscribe-email           @controllers.UsersController.unsubcribeFromAllEmailLists(id: String)
 
 GET        /v1/orphan/:email                        @controllers.UsersController.findOrphanByEmail(email: String)
