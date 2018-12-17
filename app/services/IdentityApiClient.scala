@@ -80,8 +80,8 @@ class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) 
 
   def findNewsletterSubscriptions(userId: String): ApiResponse[NewslettersSubscription] = {
     addAuthHeaders(ws.url(s"$baseUrl/useremails/$userId")).get().map { response =>
-      Try(Json.parse(response.body).asOpt[IdentityNewsletterResponse]) match {
-        case Success(Some(parsedResponse)) =>
+      Try(Json.parse(response.body).as[IdentityNewsletterResponse]) match {
+        case Success(parsedResponse) =>
           \/-(NewslettersSubscription(parsedResponse.result.globalSubscriptionStatus, parsedResponse.result.subscriptions.map(_.listId)))
         case _ =>
           logger.error(s"findNewsletterSubscriptions unexpected response from idapi $userId ${response.status} ${response.body}")

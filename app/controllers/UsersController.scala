@@ -174,16 +174,16 @@ import java.nio.file.Files
     )
   }
 
-  def unsubcribeFromAllEmailLists(id: String) = auth.async { request =>
+  def unsubcribeFromAllEmailLists(userId: String) = auth.async { request =>
     logger.info("Unsubscribing from all editorial email lists ")
 
-    EitherT(identityApiClient.unsubscribeAll(id)).fold(
+    EitherT(identityApiClient.unsubscribeAll(userId)).fold(
       error => {
-        logger.error(s"Failed to unsubscribe from all email lists: $id $error")
+        logger.error(s"Failed to unsubscribe from all email lists: $userId $error")
         InternalServerError(error)
       },
       _ => {
-        logger.info(s"Successfully unsubscribed from all email lists $id")
+        logger.info(s"Successfully unsubscribed from all email lists $userId")
         NoContent
       }
     )
