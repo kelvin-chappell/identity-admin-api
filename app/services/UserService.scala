@@ -39,13 +39,12 @@ import scalaz.{-\/, EitherT, \/, \/-}
     val usernameValid = isUsernameValid(existingUser, userUpdateRequest)
 
     postgresReservedEmailRepository.isReserved(userUpdateRequest.email).flatMap {
-      case \/-(isReserved) => {
+      case \/-(isReserved) =>
         if (emailValid && usernameValid && !isReserved) updateUser(existingUser, userUpdateRequest)
         else if (!emailValid && usernameValid) Future.successful(-\/(ApiError("Email is invalid")))
         else if (emailValid && !usernameValid) Future.successful(-\/(ApiError("Username is invalid")))
         else if (isReserved) Future.successful(-\/(ApiError("Email is reserved")))
         else Future.successful(-\/(ApiError("Email and username are invalid")))
-      }
       case -\/(error) => Future.successful(-\/(ApiError(s"Cannot access reserved emails: $error")))
     }
 
@@ -57,7 +56,7 @@ import scalaz.{-\/, EitherT, \/, \/-}
     val userEmailValidatedChanged = isEmailValidationChanged(userEmailValidated, existingUser.status.userEmailValidated)
     val usernameChanged = isUsernameChanged(userUpdateRequest.username, existingUser.username)
     val displayNameChanged = isDisplayNameChanged(userUpdateRequest.displayName, existingUser.displayName)
-    val updateRequestWithEmailValidation = userUpdateRequest.copy(userEmailValidated = userEmailValidated)
+    val updateRequestWithEmailValidation: UserUpdateRequest = userUpdateRequest.copy(userEmailValidated = userEmailValidated)
 
     val updatedUser = for {
       user <- EitherT(postgresUsersReadRepository.update(existingUser, updateRequestWithEmailValidation))

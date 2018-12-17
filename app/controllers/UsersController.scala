@@ -120,8 +120,8 @@ import java.nio.file.Files
     }
   }
 
-  def findExactTargetDetails(id: String) = auth.async { _ =>
-    withMetricsF("findExactTargetDetails") {
+  def findNewsletterSubscriptions(id: String) = auth.async { _ =>
+    withMetricsF("findNewsletterSubscriptions") {
       identityApiClient.findNewsletterSubscriptions(id).map {
         case \/-(result) => Ok(result)
         case -\/(error) => InternalServerError(error)

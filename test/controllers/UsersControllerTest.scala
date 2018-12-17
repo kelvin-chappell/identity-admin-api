@@ -192,7 +192,7 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
     "find a user's exact target details" in {
       val newsletterSubs = NewslettersSubscription("subscribed", List("123"))
       when(identityApiClient.findNewsletterSubscriptions(testIdentityId)) thenReturn Future.successful(\/-(newsletterSubs))
-      val result = controller.findExactTargetDetails(testIdentityId)(FakeRequest())
+      val result = controller.findNewsletterSubscriptions(testIdentityId)(FakeRequest())
       status(result) shouldEqual OK
       contentAsJson(result) shouldEqual Json.parse("""{"globalSubscriptionStatus":"subscribed", "newsletterSubscriptions":["123"]}""")
     }
