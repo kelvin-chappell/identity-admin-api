@@ -135,8 +135,8 @@ class PostgresSubjectAccessRequestRepositoryTest extends WordSpecLike
            |  "identityId" : "54321",
            |  "emailAddress" : "1234@email.com",
            |  "created" : "3000-01-01 00:00:00.0",
-           |  "hasBeenUsed" : false,
-           |  "hasBeenInvalidated" : false
+           |  "isUsed" : false,
+           |  "isInvalidated" : false
            |}""".stripMargin
       ))}
     }

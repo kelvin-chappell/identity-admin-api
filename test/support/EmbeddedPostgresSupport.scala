@@ -58,8 +58,8 @@ trait EmbeddedPostgresSupport extends BeforeAndAfterAll {
       |  identity_id VARCHAR NOT NULL REFERENCES users(id),
       |  email_address VARCHAR NOT NULL,
       |  created TIMESTAMP NOT NULL,
-      |  has_been_used BOOLEAN NOT NULL,
-      |  has_been_invalidated BOOLEAN NOT NULL
+      |  is_used BOOLEAN NOT NULL,
+      |  is_invalidated BOOLEAN NOT NULL
       |);
     """.stripMargin
     SQL(autoSignInTokensTable).update().apply()

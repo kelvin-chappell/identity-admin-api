@@ -20,7 +20,7 @@ object NewsletterSubscriptionRow  {
   }
 }
 
-case class AutoSignInTokenRow(identityId: String, emailAddress: String, created: Timestamp, hasBeenUsed: Boolean, hasBeenInvalidated: Boolean)
+case class AutoSignInTokenRow(identityId: String, emailAddress: String, created: Timestamp, isUsed: Boolean, isInvalidated: Boolean)
 
 object AutoSignInTokenRow {
   implicit val timestampWrites: Writes[Timestamp] = timestamp => JsString(timestamp.toString)
@@ -31,8 +31,8 @@ object AutoSignInTokenRow {
       resultSet.string("identity_id"),
       resultSet.string("email_address"),
       resultSet.timestamp("created"),
-      resultSet.boolean("has_been_used"),
-      resultSet.boolean("has_been_invalidated")
+      resultSet.boolean("is_used"),
+      resultSet.boolean("is_invalidated")
     )
   }
 }
