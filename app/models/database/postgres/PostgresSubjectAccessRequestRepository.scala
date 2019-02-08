@@ -10,7 +10,7 @@ import scalaz.EitherT
 import scalikejdbc._
 import scalaz._
 import Scalaz._
-import models.database.rows.NewsletterSubscriptionRow
+import models.database.rows.{AutoSignInTokenRow, NewsletterSubscriptionRow}
 import models.database.rows.NewsletterSubscriptionRow.newsletterSubscriptionRowWrites
 import net.liftweb.json.JsonDSL._
 import net.liftweb.json.{JObject, compactRender}
@@ -129,6 +129,11 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
         sql"""
              | select * from autosignintokens where identity_id = $id
           """.stripMargin
-    executeSql(sql, "autoSignInTokens")
+    readOnly { implicit session =>
+      sql
+        .map(AutoSignInTokenRow.apply)
+        .list()()
+        .map(row => Json.prettyPrint(Json.toJson(row)))
+    }(logFailure(s"failed to run SAR on autoSignInTokens"))
   }
 }

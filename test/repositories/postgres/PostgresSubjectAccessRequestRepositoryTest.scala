@@ -130,9 +130,15 @@ class PostgresSubjectAccessRequestRepositoryTest extends WordSpecLike
              | INSERT INTO autosignintokens VALUES ('123-token', '54321', '1234@email.com', '3000-01-01T00:00:00.000Z', false, false)
          """.stripMargin)
 
-      whenReady(repo.getAutoSignInTokens("54321")) { result =>
-        result.map(_ shouldBe List("123-token"))
-      }
+      whenReady(repo.getAutoSignInTokens("54321")) {_ shouldBe \/-(List(
+        """|{
+           |  "identityId" : "54321",
+           |  "emailAddress" : "1234@email.com",
+           |  "created" : "3000-01-01 00:00:00.0",
+           |  "hasBeenUsed" : false,
+           |  "hasBeenInvalidated" : false
+           |}""".stripMargin
+      ))}
     }
   }
 }
