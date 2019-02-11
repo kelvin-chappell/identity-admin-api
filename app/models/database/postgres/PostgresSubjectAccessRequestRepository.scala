@@ -10,7 +10,7 @@ import scalaz.EitherT
 import scalikejdbc._
 import scalaz._
 import Scalaz._
-import models.database.rows.NewsletterSubscriptionRow
+import models.database.rows.{AutoSignInTokenRow, NewsletterSubscriptionRow}
 import models.database.rows.NewsletterSubscriptionRow.newsletterSubscriptionRowWrites
 import net.liftweb.json.JsonDSL._
 import net.liftweb.json.{JObject, compactRender}
@@ -35,7 +35,8 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
       syncedPrefs <- EitherT(getSyncedPrefs(id))
       user <- EitherT(getUser(id))
       newsLetterSubscriptions <- EitherT(getNewsletterSubscriptions(id))
-    } yield accessTokens ++ guestRegistrationRequest ++ passwordHashes ++ passwordResetRequests ++ reservedEmails ++ syncedPrefs ++ user ++ newsLetterSubscriptions).run
+      autoSignInLinks <- EitherT(getAutoSignInTokens(id))
+    } yield accessTokens ++ guestRegistrationRequest ++ passwordHashes ++ passwordResetRequests ++ reservedEmails ++ syncedPrefs ++ user ++ newsLetterSubscriptions ++ autoSignInLinks).run
   }
 
   def executeSql(sql: SQL[Nothing, NoExtractor], table: String) = readOnly { implicit session =>
@@ -121,5 +122,18 @@ class PostgresSubjectAccessRequestRepository @Inject()(val metricsActorProvider:
         .list()()
         .map(row => Json.prettyPrint(Json.toJson(row)))
     }(logFailure(s"failed to get newsletter subscriptions for $id"))
+  }
+
+  def getAutoSignInTokens(id: String) = withMetricsFE("sar.getAutoSignInTokens") {
+      val sql =
+        sql"""
+             | select * from autosignintokens where identity_id = $id
+          """.stripMargin
+    readOnly { implicit session =>
+      sql
+        .map(AutoSignInTokenRow.apply)
+        .list()()
+        .map(row => Json.prettyPrint(Json.toJson(row)))
+    }(logFailure(s"failed to run SAR on autoSignInTokens"))
   }
 }
