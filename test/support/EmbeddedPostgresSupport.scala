@@ -50,26 +50,13 @@ trait EmbeddedPostgresSupport extends BeforeAndAfterAll {
       |);
     """.stripMargin
     SQL(newsletterSubscriptionTable).update().apply()
-
-    val autoSignInTokensTable = """
-      |DROP TABLE IF EXISTS autosignintokens;
-      |CREATE TABLE IF NOT EXISTS autosignintokens(
-      |  token VARCHAR PRIMARY KEY,
-      |  identity_id VARCHAR NOT NULL REFERENCES users(id),
-      |  email_address VARCHAR NOT NULL,
-      |  created TIMESTAMP NOT NULL,
-      |  is_used BOOLEAN NOT NULL,
-      |  is_invalidated BOOLEAN NOT NULL
-      |);
-    """.stripMargin
-    SQL(autoSignInTokensTable).update().apply()
   }
 
   override def beforeAll: Unit = {
     super.beforeAll()
     val url = startPostgres()
     ConnectionPool.singleton(url, "username", "password")
-    createTables("users", "reservedusernames", "reservedemails", "accesstokens", "guestregistrationrequests", "syncedPrefs", "reservedemails", "passwordhashes", "passwordhashes", "autosignintokens")
+    createTables("users", "reservedusernames", "reservedemails", "accesstokens", "guestregistrationrequests", "syncedPrefs", "reservedemails", "passwordhashes", "passwordhashes")
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         stopPostgres()
