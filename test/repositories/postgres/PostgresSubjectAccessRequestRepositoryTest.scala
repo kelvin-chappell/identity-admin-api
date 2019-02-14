@@ -34,6 +34,7 @@ class PostgresSubjectAccessRequestRepositoryTest extends WordSpecLike
     execSql(sql"delete from newsletter_subscriptions")
     execSql(sql"delete from users")
     execSql(sql"delete from accesstokens")
+    execSql(sql"delete from autosignintokens")
 
     val testUser = IdentityUser(
       "identitydev@guardian.co.uk", "1234",
@@ -82,7 +83,7 @@ class PostgresSubjectAccessRequestRepositoryTest extends WordSpecLike
       }
     }
 
-    "return emtpy list if user is not in DB" in new TestFixture {
+    "return empty list if user is not in DB" in new TestFixture {
       whenReady(repo.getUser("1111")) { result =>
         result.map(userStrings => userStrings shouldEqual List.empty)
       }
@@ -95,7 +96,7 @@ class PostgresSubjectAccessRequestRepositoryTest extends WordSpecLike
       }
     }
 
-    "subjectAccessRequestById gets a list of users data from tabels" in new TestFixture {
+    "subjectAccessRequestById gets a list of users data from tables" in new TestFixture {
       whenReady(repo.subjectAccessRequestById("1234")) { result =>
         result.map(_.length shouldEqual(2))
       }
@@ -122,5 +123,23 @@ class PostgresSubjectAccessRequestRepositoryTest extends WordSpecLike
            |}""".stripMargin
       ))}
     }
+  }
+
+  "getAutoSignInTokens" in new TestFixture {
+    execSql(sql"INSERT INTO users values ('54321', '{}')")
+    execSql(
+      sql"""
+           | INSERT INTO autosignintokens VALUES ('123-token', '54321', '1234@email.com', '3000-01-01T00:00:00.000Z', false, false)
+         """.stripMargin)
+
+    whenReady(repo.getAutoSignInTokens("54321")) {_ shouldBe \/-(List(
+      """|{
+         |  "identityId" : "54321",
+         |  "emailAddress" : "1234@email.com",
+         |  "created" : "3000-01-01 00:00:00.0",
+         |  "isUsed" : false,
+         |  "isInvalidated" : false
+         |}""".stripMargin
+    ))}
   }
 }
