@@ -27,7 +27,7 @@ trait EmbeddedPostgresSupport extends BeforeAndAfterAll {
   def createTables(tableNames: String*): Unit = DB.localTx { implicit s =>
     tableNames.foreach { tableToCreate =>
       val create =
-      s"""
+        s"""
            |DROP TABLE IF EXISTS $tableToCreate;
            |CREATE TABLE $tableToCreate(
            |  id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -39,24 +39,39 @@ trait EmbeddedPostgresSupport extends BeforeAndAfterAll {
       SQL(create).update().apply()
     }
 
-    val newsletterSubscriptionTable = """
-      |DROP TABLE IF EXISTS newsletter_subscriptions;
-      |CREATE TABLE IF NOT EXISTS newsletter_subscriptions(
-      |  user_id VARCHAR NOT NULL REFERENCES users(id),
-      |  newsletter_name VARCHAR NOT NULL,
-      |  subscribed BOOLEAN NOT NULL,
-      |  last_updated TIMESTAMP NOT NULL,
-      |  PRIMARY KEY(user_id, newsletter_name)
-      |);
-    """.stripMargin
+    val newsletterSubscriptionTable =
+      """
+        |DROP TABLE IF EXISTS newsletter_subscriptions;
+        |CREATE TABLE IF NOT EXISTS newsletter_subscriptions(
+        |  user_id VARCHAR NOT NULL REFERENCES users(id),
+        |  newsletter_name VARCHAR NOT NULL,
+        |  subscribed BOOLEAN NOT NULL,
+        |  last_updated TIMESTAMP NOT NULL,
+        |  PRIMARY KEY(user_id, newsletter_name)
+        |);
+      """.stripMargin
     SQL(newsletterSubscriptionTable).update().apply()
+
+    val autoSignInTokensTable =
+      """
+        |DROP TABLE IF EXISTS autosignintokens;
+        |CREATE TABLE IF NOT EXISTS autosignintokens(
+        |  token VARCHAR PRIMARY KEY,
+        |  identity_id VARCHAR NOT NULL REFERENCES users(id),
+        |  email_address VARCHAR NOT NULL,
+        |  created TIMESTAMP NOT NULL,
+        |  is_used BOOLEAN NOT NULL,
+        |  is_invalidated BOOLEAN NOT NULL
+        |);
+      """.stripMargin
+    SQL(autoSignInTokensTable).update().apply()
   }
 
   override def beforeAll: Unit = {
     super.beforeAll()
     val url = startPostgres()
     ConnectionPool.singleton(url, "username", "password")
-    createTables("users", "reservedusernames", "reservedemails", "accesstokens", "guestregistrationrequests", "syncedPrefs", "reservedemails", "passwordhashes", "passwordhashes")
+    createTables("users", "reservedusernames", "reservedemails", "accesstokens", "guestregistrationrequests", "syncedPrefs", "reservedemails", "passwordhashes", "passwordhashes", "autosignintokens")
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         stopPostgres()
