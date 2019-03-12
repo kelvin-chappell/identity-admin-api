@@ -83,7 +83,7 @@ Mappings:
       LatencyAlarmPeriod: 1200
       NotificationAlarmPeriod: 1200
       RDSClientsSecurityGroupId: sg-ce0783b5
-      InstanceType: t3.micro
+      InstanceType: t3.small
   CertsMap:
     CODE:
       ssl: certificate/9e4311d0-a8e8-4daf-96d9-8b150952ebb8
