@@ -13,35 +13,6 @@ Parameters:
     AllowedValues:
     - CODE
     - PROD
-  InstanceType:
-    Description: EC2 instance type
-    Type: String
-    Default: t2.small
-    AllowedValues:
-    - t2.micro
-    - t2.small
-    - t2.medium
-    - m3.medium
-    - m3.large
-    - m3.xlarge
-    - m3.2xlarge
-    - c3.large
-    - c3.xlarge
-    - c3.2xlarge
-    - c3.4xlarge
-    - c3.8xlarge
-    - g2.2xlarge
-    - r3.large
-    - r3.xlarge
-    - r3.2xlarge
-    - r3.4xlarge
-    - r3.8xlarge
-    - i2.xlarge
-    - i2.2xlarge
-    - i2.4xlarge
-    - i2.8xlarge
-    - hs1.8xlarge
-    ConstraintDescription: must be a valid EC2 instance type.
   MaxInstances:
     Description: Maximum number of instances. This should be (at least) double the
       desired capacity.
@@ -105,12 +76,14 @@ Mappings:
       LatencyAlarmPeriod: 60
       NotificationAlarmPeriod: 1200
       RDSClientsSecurityGroupId: sg-f433b78f
+      InstanceType: t3.small
     CODE:
       AutoscalingNotificationsARN: arn:aws:sns:eu-west-1:942464564246:AutoscalingNotificationsCODE
       LatencyAlarmThreshold: 5
       LatencyAlarmPeriod: 1200
       NotificationAlarmPeriod: 1200
       RDSClientsSecurityGroupId: sg-ce0783b5
+      InstanceType: t3.micro
   CertsMap:
     CODE:
       ssl: certificate/9e4311d0-a8e8-4daf-96d9-8b150952ebb8
@@ -275,7 +248,7 @@ Resources:
       - !Ref 'VulnerabilityScanningSecurityGroup'
       - !Ref 'SshAccessSecurityGroup'
       - !FindInMap [StageVariables, !Ref 'Stage', RDSClientsSecurityGroupId]
-      InstanceType: !Ref 'InstanceType'
+      InstanceType: !FindInMap [StageVariables, !Ref 'Stage', InstanceType]
       AssociatePublicIpAddress: 'False'
       IamInstanceProfile: !Ref 'InstanceProfile'
       UserData:
