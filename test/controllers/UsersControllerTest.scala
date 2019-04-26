@@ -275,6 +275,34 @@ class UsersControllerTest extends WordSpec with Matchers with MockitoSugar with 
     }
   }
 
+  "removeFromBounceList" should {
+    "return 204 when user is removed from the Braze bounce list" in {
+      when(identityApiClient.removeFromBounceList(testIdentityId)).thenReturn(Future.successful(\/-{}))
+      val result = controller.removeFromBounceList(testIdentityId)(FakeRequest())
+      status(result) shouldEqual NO_CONTENT
+    }
+
+    "return 500 when there is an unexpected response from idapi" in {
+      when(identityApiClient.removeFromBounceList(testIdentityId)).thenReturn(Future.successful(-\/(ApiError(""))))
+      val result = controller.removeFromBounceList(testIdentityId)(FakeRequest())
+      status(result) shouldEqual INTERNAL_SERVER_ERROR
+    }
+  }
+
+  "removeFromSpamList" should {
+    "return 204 when user is removed from the Braze bounce list" in {
+      when(identityApiClient.removeFromSpamList(testIdentityId)).thenReturn(Future.successful(\/-{}))
+      val result = controller.removeFromSpamList(testIdentityId)(FakeRequest())
+      status(result) shouldEqual NO_CONTENT
+    }
+
+    "return 500 when there is an unexpected response from idapi" in {
+      when(identityApiClient.removeFromSpamList(testIdentityId)).thenReturn(Future.successful(-\/(ApiError(""))))
+      val result = controller.removeFromSpamList(testIdentityId)(FakeRequest())
+      status(result) shouldEqual INTERNAL_SERVER_ERROR
+    }
+  }
+
   "validateEmail" should {
     "return 404 when user is not found" in {
       when(identityUserAction.apply(any[String])).thenReturn(createIdentityUserActionLeftMock())
