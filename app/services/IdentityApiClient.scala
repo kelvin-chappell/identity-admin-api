@@ -113,4 +113,24 @@ class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) 
     }
   }
 
+  def removeFromBounceList(userId: String): ApiResponse[Unit] = {
+    addAuthHeaders(ws.url(s"$baseUrl/useremails/$userId/bounce-list-remove")).post("").map { response =>
+      if (response.status == 200) {
+        \/-(())
+      } else {
+        -\/(ApiError("unexpected response from idapi", s"${response.status}, ${response.body}"))
+      }
+    }
+  }
+
+  def removeFromSpamList(userId: String): ApiResponse[Unit] = {
+    addAuthHeaders(ws.url(s"$baseUrl/useremails/$userId/spam-list-remove")).post("").map { response =>
+      if (response.status == 200) {
+        \/-(())
+      } else {
+        -\/(ApiError("unexpected response from idapi", s"${response.status}, ${response.body}"))
+      }
+    }
+  }
+
 }

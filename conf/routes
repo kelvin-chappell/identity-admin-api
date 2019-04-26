@@ -15,5 +15,7 @@ POST       /v1/user/:id/validate-email              @controllers.UsersController
 POST       /v1/user/:id/unreserve-email             @controllers.UsersController.unreserveEmail(id: String)
 POST       /v1/user/:id/block-email                 @controllers.UsersController.blockEmail(id: String)
 POST       /v1/user/:id/unsubscribe-email           @controllers.UsersController.unsubcribeFromAllEmailLists(id: String)
+POST       /v1/user/:id/cmt/bounce-list-remove      @controllers.UsersController.removeFromBounceList(id: String)
+POST       /v1/user/:id/cmt/spam-list-remove        @controllers.UsersController.removeFromSpamList(id: String)
 
 GET        /v1/orphan/:email                        @controllers.UsersController.findOrphanByEmail(email: String)
