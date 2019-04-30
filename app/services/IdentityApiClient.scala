@@ -91,6 +91,7 @@ class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) 
     }
   }
 
+  // TODO: it seems that not all these methods have a way of recovering from a failed Future
   def unsubscribeAll(userId: String): ApiResponse[Unit] = {
     addAuthHeaders(ws.url(s"$baseUrl/useremails/$userId/unsubscribe")).post("").map { response =>
       if (response.status == 200) {
@@ -120,6 +121,9 @@ class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) 
       } else {
         -\/(ApiError("unexpected response from idapi", s"${response.status}, ${response.body}"))
       }
+    }.recover { case e =>
+        logger.error("Could not remove user from hard bounce list", e.getMessage)
+      -\/(ApiError("Could not remove user from hard bounce list", e.getMessage))
     }
   }
 
@@ -130,7 +134,9 @@ class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) 
       } else {
         -\/(ApiError("unexpected response from idapi", s"${response.status}, ${response.body}"))
       }
+    }.recover { case e =>
+      logger.error("Could not remove user from spam list", e.getMessage)
+      -\/(ApiError("Could not remove user from spam list", e.getMessage))
     }
   }
-
 }

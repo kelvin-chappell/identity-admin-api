@@ -131,14 +131,20 @@ import java.nio.file.Files
 
   def removeFromBounceList(id: String) = auth.async { _ =>
     EitherT(identityApiClient.removeFromBounceList(id)).fold(
-      error => InternalServerError(error),
+      error => {
+        logger.error("Failed to remove user from hard bounce list", error.message)
+        InternalServerError(error)
+      },
       _ => NoContent
     )
   }
 
   def removeFromSpamList(id: String) = auth.async { _ =>
     EitherT(identityApiClient.removeFromSpamList(id)).fold(
-      error => InternalServerError(error),
+      error => {
+        logger.error("Failed to remove user from spam list", error.message)
+        InternalServerError(error)
+      },
       _ => NoContent
     )
   }
