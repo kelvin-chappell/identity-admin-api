@@ -122,7 +122,6 @@ class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) 
         -\/(ApiError("unexpected response from idapi", s"${response.status}, ${response.body}"))
       }
     }.recover { case e =>
-        logger.error("Could not remove user from hard bounce list", e.getMessage)
       -\/(ApiError("Could not remove user from hard bounce list", e.getMessage))
     }
   }
@@ -135,7 +134,6 @@ class IdentityApiClient @Inject() (ws: WSClient)(implicit ec: ExecutionContext) 
         -\/(ApiError("unexpected response from idapi", s"${response.status}, ${response.body}"))
       }
     }.recover { case e =>
-      logger.error("Could not remove user from spam list", e.getMessage)
       -\/(ApiError("Could not remove user from spam list", e.getMessage))
     }
   }
