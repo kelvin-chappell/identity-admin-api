@@ -13,6 +13,10 @@ Configuration files:
 
 Clone [identity-platform](https://github.com/guardian/identity-platform) and follow its [README](https://github.com/guardian/identity-platform/blob/master/README.md#setup-nginx-for-local-development)
 
+## Database setup
+
+Follow the [Docker PostgreSQL Readme](https://github.com/guardian/identity-platform/blob/master/postgres/readme.md) to install and start up a database in a local Docker container.  If successful the database service should be listening on port 5555. 
+
 ## Running the Application
 
 ```
